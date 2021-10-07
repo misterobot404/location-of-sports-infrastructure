@@ -1,5 +1,5 @@
 <template>
-  <h1>Vue</h1>
+  <h1>Welcome to Clever Product</h1>
 </template>
 
 <script>
