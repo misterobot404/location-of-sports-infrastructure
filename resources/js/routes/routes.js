@@ -1,6 +1,11 @@
 export const routes = [
     {
-        path: '*',
+        name: 'Home',
+        path: '/',
         component: () => import('../pages/Home'),
+    },
+    {
+        path: '*',
+        redirect: '/'
     }
 ];
