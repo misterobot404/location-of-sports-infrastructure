@@ -2,12 +2,11 @@ export const routes = [
     //dont set name field to hide from header
     {
         path: '/',
-        component: () => import('../pages/Home'),
-    },
-    {
-        path: '//',
         name: 'Main',
-        alias: ['/'],
+        component: () => import('../pages/Home'),
+        meta: {
+            title: 'Go to main page' //set if u want to set title on header element
+        }
     },
     {
         path: '/404',

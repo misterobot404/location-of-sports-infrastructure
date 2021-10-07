@@ -4,7 +4,9 @@
             <router-link class="navbar__item"
             v-for="item in filteredRouters"
             :key="item.name"
-            :to="item.path"
+            :to="{name: item.name}"
+            :title="item.meta && item.meta.title ? item.meta.title : ''"
+            exact
             >{{item.name}}
             </router-link>
         </div>
