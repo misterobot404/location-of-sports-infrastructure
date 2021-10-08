@@ -5,13 +5,13 @@ export const routes = [
         name: 'Main',
         component: () => import('../pages/Home'),
         meta: {
-            title: 'Go to main page' //set if u want to set title on header element
+            title: 'Go to main page' //set if u want to set title on nav element
         }
     },
     {
-        path: '/404',
-        name: '404',
-        component: () => import('../pages/page404'),
+        // Страница с информацией по объекту
+        path: '/info/:id',
+        component: () => import('../pages/ObjectInfo'),
     },
     {
         path: '*',
