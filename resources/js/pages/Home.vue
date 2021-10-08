@@ -13,8 +13,6 @@
             <router-link to="/info/123" tag="button">Предположим, что я объект</router-link>
         </div>
     </section>
-
-
 </template>
 
 <script>

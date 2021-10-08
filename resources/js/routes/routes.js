@@ -1,5 +1,5 @@
 export const routes = [
-    //dont set name field to hide from header
+    //dont set <name> field to hide from header
     {
         path: '/',
         name: 'Main',
