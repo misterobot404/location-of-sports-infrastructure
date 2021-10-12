@@ -6,7 +6,7 @@
         </template>
         <template v-else>
             <h1> Здесь будет инфа о всех (не всех, только 5000) спортивных объектах:</h1>
-            <div class="object__container container" v-text="sport_objects.slice(0, 5000)"/>
+            <div class="object__container container" v-text="sport_objects.slice(0, 1000)"/>
         </template>
 <!--        <div v-if="error != ''" class="error" v-html="error"></div>-->
     </section>
