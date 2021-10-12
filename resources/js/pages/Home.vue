@@ -10,14 +10,20 @@
         <div class="map__container container">
             Я карта!
             <br/>
-            <router-link to="/info/123" tag="button">Предположим, что я объект</router-link>
+            <input v-model="sport_object" placeholder="id объекта">
+            <router-link :to="'/info/' + sport_object" tag="button">Перейти</router-link>
         </div>
     </section>
 </template>
 
 <script>
 export default {
-    name: "Home"
+    name: "Home",
+    data() {
+        return {
+            sport_object: null
+        }
+    }
 }
 </script>
 

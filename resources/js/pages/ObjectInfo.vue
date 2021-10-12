@@ -1,22 +1,30 @@
 <template>
     <section>
-        <h1> Здесь будет инфа об объекте id: {{object_id}}</h1>
-        <div class="object__container container">
-        </div>
-        {{serverData}}
-        <div v-if="error != ''" class="error" v-html="error"></div>
+        <template v-if="$route.params.id">
+            <h1> Здесь будет инфа об объекте id: {{object_id}}</h1>
+            <div class="object__container container" v-text="getSportObjectById(Number($route.params.id))"/>
+        </template>
+        <template v-else>
+            <h1> Здесь будет инфа о всех (не всех, только 5000) спортивных объектах:</h1>
+            <div class="object__container container" v-text="sport_objects.slice(0, 5000)"/>
+        </template>
+<!--        <div v-if="error != ''" class="error" v-html="error"></div>-->
     </section>
 </template>
 
 <script>
-import axios from 'axios';
+import {mapState, mapGetters} from "vuex"
 export default {
     name: 'ObjectInfo',
-    data () {
+    computed: {
+        ...mapState('sport_objects',["sport_objects"]),
+        ...mapGetters('sport_objects',["getSportObjectById"])
+    }
+    /*data () {
         return {
-            object_id: null,
-            serverData: '',
-            error: ''
+            // object_id: null,
+            // serverData: '',
+            // error: ''
         }
     },
     methods: {
@@ -38,7 +46,7 @@ export default {
     mounted () {
         this.object_id = this.$route.params.id;
         this.get_hello();
-    }
+    }*/
 }
 </script>
 

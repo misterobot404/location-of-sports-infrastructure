@@ -12,4 +12,9 @@ new Vue({
     store,
     router,
     render: h => h(App),
+    beforeCreate() {
+        store.dispatch('sport_objects/getSportObjects', null, {root: true}).then();
+    }
 }).$mount('#app');
+
+
