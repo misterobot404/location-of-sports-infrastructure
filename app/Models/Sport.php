@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Accessibility extends Model
+class Sport extends Model
 {
     use HasFactory;
-    protected $table = 'dict_accessibilities';
+    protected $table = 'dict_sports';
 }

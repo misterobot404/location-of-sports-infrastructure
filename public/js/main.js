@@ -2109,7 +2109,6 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
-//
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: 'my-navbar',
   data: function data() {
@@ -2185,7 +2184,10 @@ __webpack_require__.r(__webpack_exports__);
 var routes = [//dont set <name> field to hide from header
 {
   path: '/',
-  name: 'Main',
+  redirect: '/home'
+}, {
+  path: '/home',
+  name: 'Home',
   component: function component() {
     return __webpack_require__.e(/*! import() */ "resources_js_pages_Home_vue").then(__webpack_require__.bind(__webpack_require__, /*! ../pages/Home */ "./resources/js/pages/Home.vue"));
   },
@@ -2196,7 +2198,7 @@ var routes = [//dont set <name> field to hide from header
 }, {
   // Страница с информацией по объекту
   name: 'Sport Objects',
-  path: '/info/:id?',
+  path: '/sport-objects/:id?',
   component: function component() {
     return __webpack_require__.e(/*! import() */ "resources_js_pages_ObjectInfo_vue").then(__webpack_require__.bind(__webpack_require__, /*! ../pages/ObjectInfo */ "./resources/js/pages/ObjectInfo.vue"));
   }
@@ -2223,9 +2225,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.esm.js");
 /* harmony import */ var vuex__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vuex */ "./node_modules/vuex/dist/vuex.esm.js");
 /* harmony import */ var _modules_auth__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./modules/auth */ "./resources/js/store/modules/auth.js");
-/* harmony import */ var _modules_sport_objects__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./modules/sport_objects */ "./resources/js/store/modules/sport_objects.js");
-/* harmony import */ var _modules_accessibility__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./modules/accessibility */ "./resources/js/store/modules/accessibility.js");
-/* harmony import */ var _modules_organisations__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./modules/organisations */ "./resources/js/store/modules/organisations.js");
+/* harmony import */ var _modules_sports__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./modules/sports */ "./resources/js/store/modules/sports.js");
+/* harmony import */ var _modules_relations__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./modules/relations */ "./resources/js/store/modules/relations.js");
+/* harmony import */ var _modules_sport_objects__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./modules/sport_objects */ "./resources/js/store/modules/sport_objects.js");
+/* harmony import */ var _modules_accessibility__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./modules/accessibility */ "./resources/js/store/modules/accessibility.js");
+/* harmony import */ var _modules_organisations__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./modules/organisations */ "./resources/js/store/modules/organisations.js");
 
 
 vue__WEBPACK_IMPORTED_MODULE_0__["default"].use(vuex__WEBPACK_IMPORTED_MODULE_1__["default"]);
@@ -2233,12 +2237,16 @@ vue__WEBPACK_IMPORTED_MODULE_0__["default"].use(vuex__WEBPACK_IMPORTED_MODULE_1_
 
 
 
+
+
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (new vuex__WEBPACK_IMPORTED_MODULE_1__["default"].Store({
   strict: true,
   modules: {
-    sport_objects: _modules_sport_objects__WEBPACK_IMPORTED_MODULE_3__["default"],
-    accessibility: _modules_accessibility__WEBPACK_IMPORTED_MODULE_4__["default"],
-    organisations: _modules_organisations__WEBPACK_IMPORTED_MODULE_5__["default"],
+    sports: _modules_sports__WEBPACK_IMPORTED_MODULE_3__["default"],
+    relations: _modules_relations__WEBPACK_IMPORTED_MODULE_4__["default"],
+    sport_objects: _modules_sport_objects__WEBPACK_IMPORTED_MODULE_5__["default"],
+    accessibility: _modules_accessibility__WEBPACK_IMPORTED_MODULE_6__["default"],
+    organisations: _modules_organisations__WEBPACK_IMPORTED_MODULE_7__["default"],
     auth: _modules_auth__WEBPACK_IMPORTED_MODULE_2__["default"]
   }
 }));
@@ -2319,6 +2327,53 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
+/***/ "./resources/js/store/modules/relations.js":
+/*!*************************************************!*\
+  !*** ./resources/js/store/modules/relations.js ***!
+  \*************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! axios */ "./node_modules/axios/index.js");
+/* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(axios__WEBPACK_IMPORTED_MODULE_0__);
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  namespaced: true,
+  state: {
+    relations: null
+  },
+  getters: {
+    getSportIdBySportObjectId: function getSportIdBySportObjectId(state) {
+      return function (id) {
+        console.log(id);
+        var rel = state.relations.find(function (el) {
+          return el.id_object === id;
+        });
+        return rel.id_sport;
+      };
+    }
+  },
+  actions: {
+    getRelations: function getRelations(_ref) {
+      var commit = _ref.commit;
+      return axios__WEBPACK_IMPORTED_MODULE_0___default().get('/api/relations').then(function (response) {
+        commit('SET_RELATIONS', response.data.relations);
+      });
+    }
+  },
+  mutations: {
+    SET_RELATIONS: function SET_RELATIONS(state, relations) {
+      state.relations = relations;
+    }
+  }
+});
+
+/***/ }),
+
 /***/ "./resources/js/store/modules/sport_objects.js":
 /*!*****************************************************!*\
   !*** ./resources/js/store/modules/sport_objects.js ***!
@@ -2365,6 +2420,51 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
+/***/ "./resources/js/store/modules/sports.js":
+/*!**********************************************!*\
+  !*** ./resources/js/store/modules/sports.js ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! axios */ "./node_modules/axios/index.js");
+/* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(axios__WEBPACK_IMPORTED_MODULE_0__);
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+  namespaced: true,
+  state: {
+    sports: null
+  },
+  getters: {
+    getSportById: function getSportById(state) {
+      return function (id) {
+        return state.sports.find(function (el) {
+          return el.id === id;
+        });
+      };
+    }
+  },
+  actions: {
+    getSports: function getSports(_ref) {
+      var commit = _ref.commit;
+      return axios__WEBPACK_IMPORTED_MODULE_0___default().get('/api/sports').then(function (response) {
+        commit('SET_SPORTS', response.data.sports);
+      });
+    }
+  },
+  mutations: {
+    SET_SPORTS: function SET_SPORTS(state, sports) {
+      state.sports = sports;
+    }
+  }
+});
+
+/***/ }),
+
 /***/ "./node_modules/laravel-mix/node_modules/css-loader/dist/cjs.js??clonedRuleSet-8[0].rules[0].use[1]!./node_modules/vue-loader/lib/loaders/stylePostLoader.js!./node_modules/postcss-loader/dist/cjs.js??clonedRuleSet-8[0].rules[0].use[2]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/App.vue?vue&type=style&index=0&id=f348271a&scoped=true&lang=css&":
 /*!********************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** ./node_modules/laravel-mix/node_modules/css-loader/dist/cjs.js??clonedRuleSet-8[0].rules[0].use[1]!./node_modules/vue-loader/lib/loaders/stylePostLoader.js!./node_modules/postcss-loader/dist/cjs.js??clonedRuleSet-8[0].rules[0].use[2]!./node_modules/vue-loader/lib/index.js??vue-loader-options!./resources/js/App.vue?vue&type=style&index=0&id=f348271a&scoped=true&lang=css& ***!
@@ -2382,7 +2482,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_laravel_mix_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_0___default()(function(i){return i[1]});
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, "\n*[data-v-f348271a] {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n", ""]);
+___CSS_LOADER_EXPORT___.push([module.id, "\n*[data-v-f348271a] {\r\n    margin: 0;\r\n    padding: 0;\r\n    box-sizing: border-box;\n}\r\n", ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -3257,8 +3357,7 @@ var render = function() {
             staticClass: "navbar__item",
             attrs: {
               to: { name: item.name },
-              title: item.meta && item.meta.title ? item.meta.title : "",
-              exact: ""
+              title: item.meta && item.meta.title ? item.meta.title : ""
             }
           },
           [_vm._v(_vm._s(item.name) + "\n        ")]
@@ -20153,6 +20252,12 @@ new vue__WEBPACK_IMPORTED_MODULE_4__["default"]({
     return h(_App__WEBPACK_IMPORTED_MODULE_0__["default"]);
   },
   beforeCreate: function beforeCreate() {
+    _store__WEBPACK_IMPORTED_MODULE_2__["default"].dispatch('sports/getSports', null, {
+      root: true
+    }).then();
+    _store__WEBPACK_IMPORTED_MODULE_2__["default"].dispatch('relations/getRelations', null, {
+      root: true
+    }).then();
     _store__WEBPACK_IMPORTED_MODULE_2__["default"].dispatch('sport_objects/getSportObjects', null, {
       root: true
     }).then();

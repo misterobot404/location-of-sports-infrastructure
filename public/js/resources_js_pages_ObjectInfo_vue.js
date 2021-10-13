@@ -36,34 +36,6 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: 'ObjectInfo',
   computed: _objectSpread(_objectSpread({}, (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapState)('sport_objects', ["sport_objects"])), (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapGetters)('sport_objects', ["getSportObjectById"]))
-  /*data () {
-      return {
-          // object_id: null,
-          // serverData: '',
-          // error: ''
-      }
-  },
-  methods: {
-      get_hello () {
-          axios.get('/api/say_hello', {params: {
-                  id: this.object_id
-              }})
-              .then(response => {
-                  this.serverData = response.data.message;
-                  this.error = '';
-              })
-              .catch(e => {
-                  this.error = e;
-              })
-              .finally(() => {
-              });
-      }
-  },
-  mounted () {
-      this.object_id = this.$route.params.id;
-      this.get_hello();
-  }*/
-
 });
 
 /***/ }),
@@ -155,11 +127,12 @@ var render = function() {
   return _c(
     "section",
     [
-      _vm.$route.params.id
+      Number(_vm.$route.params.id) && _vm.sport_objects
         ? [
             _c("h1", [
               _vm._v(
-                " Здесь будет инфа об объекте id: " + _vm._s(_vm.object_id)
+                " Здесь будет информация об объекте id: " +
+                  _vm._s(Number(_vm.$route.params.id))
               )
             ]),
             _vm._v(" "),
@@ -172,20 +145,20 @@ var render = function() {
               }
             })
           ]
-        : [
+        : _vm.sport_objects
+        ? [
             _c("h1", [
-              _vm._v(
-                " Здесь будет инфа о всех (не всех, только 5000) спортивных объектах:"
-              )
+              _vm._v(" Здесь будет информация о 1000 спортивных объектах:")
             ]),
             _vm._v(" "),
             _c("div", {
               staticClass: "object__container container",
               domProps: {
-                textContent: _vm._s(_vm.sport_objects.slice(0, 5000))
+                textContent: _vm._s(_vm.sport_objects.slice(0, 1000))
               }
             })
           ]
+        : _vm._e()
     ],
     2
   )
