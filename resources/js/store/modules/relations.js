@@ -7,9 +7,12 @@ export default {
     },
     getters: {
         getSportIdBySportObjectId: state => id => {
-            console.log(id);
             let rel = state.relations.find(el => el.id_object === id);
-            return rel.id_sport;
+            return rel ? rel.id_sport : -1;
+        },
+        getSportsBySportObjectId: state => id => {
+            let rel = state.relations.filter(el => el.id_object === id);
+            return rel;
         },
     },
     actions: {

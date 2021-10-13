@@ -1,13 +1,6 @@
 <template>
     <section style="display: flex; justify-content: center">
         <div>
-            <div class="filter__container container">
-                <input placeholder="Поиск" class="filter"/>
-                <br/>
-                <select class="filter"/>
-                <select class="filter"/>
-                <select class="filter"/>
-            </div>
             <input v-model="sport_object_id" placeholder="id объекта">
             <router-link :to="{ name: 'Sport Objects', params: {id: sport_object_id}}" tag="button">Перейти</router-link>
             <br/>
@@ -38,6 +31,7 @@ export default {
         ...mapGetters('sport_objects', ["getSportObjectById"]),
         ...mapGetters('relations', ["getSportIdBySportObjectId"]),
         ...mapGetters('sports', ["getSportById"]),
+        ...mapGetters({sports_of_object: 'relations/getSportsBySportObjectId'}),
         ready() {
             return this.sport_objects && this.sports && this.relations;
         }
@@ -59,26 +53,26 @@ export default {
                 let listBoxItems = this.sports.map(sport => {
                         return new ymaps.control.ListBoxItem({
                             data: {content: sport.name},
-                            state: {selected: true}
+                            state: {selected: false}
                         })
                     }),
-                    reducer = function (filters, filter) {
-                        filters[filter.data.get('content')] = filter.isSelected();
-                        return filters;
+                reducer = function (filters, filter) {
+                    filters[filter.data.get('content')] = filter.isSelected();
+                    return filters;
+                },
+                // Теперь создадим список, содержащий 5 пунктов.
+                listBoxControl = new ymaps.control.ListBox({
+                    data: {
+                        content: 'Фильтр по видам спорта',
+                        title: 'Фильтр'
                     },
-                    // Теперь создадим список, содержащий 5 пунктов.
-                    listBoxControl = new ymaps.control.ListBox({
-                        data: {
-                            content: 'Фильтр по видам спорта',
-                            title: 'Фильтр'
-                        },
-                        items: listBoxItems,
-                        state: {
-                            // Признак, развернут ли список.
-                            expanded: false,
-                            filters: listBoxItems.reduce(reducer, {})
-                        }
-                    });
+                    items: listBoxItems,
+                    state: {
+                        // Признак, развернут ли список.
+                        expanded: false,
+                        filters: listBoxItems.reduce(reducer, {})
+                    }
+                });
 
                 this.myMap.controls.add(listBoxControl);
 
@@ -106,6 +100,13 @@ export default {
                 for (let i = 0, count_per_step = 1000, pool = [...this.sport_objects]; i < 5000; i += count_per_step) {
                     let data = [];
                     pool.slice(i, i + count_per_step).map(el => {
+                        console.log(this.sports_of_object(el.id));
+                        let _sports = [];
+
+                        this.sports_of_object(el.id).map(e => {
+                            _sports.push(this.getSportById(e.id_sport)?.name);
+                        });
+
                         data.push({
                             type: "Feature",
                             id: el.id,
@@ -115,10 +116,10 @@ export default {
                                 radius: 1000,
                             },
                             properties: {
-                                "balloonContent": this.getSportById(this.getSportIdBySportObjectId(el.id)).name,
+                                "balloonContent": 'balloonContent',
                                 "balloonContentHeader": el.name,
-                                "balloonContentBody": "<p>ЗДЕСЬ НУЖНО ОПИСАНИЕ ОБЪЕКТА КАКОЕ_ТО</p>",
-                                "balloonContentFooter": "<font size=1>Информация предоставлена: </font> <strong>этим балуном</strong>",
+                                "balloonContentBody": "<p>ЗДЕСЬ БУДУТ ПЕРЕЧИСЛЕНЫ СПОРТ ОБЪЕКТЫ, ВОЗМОЖНО, С ЧЕМТО ЕЩЁ</p>",
+                                "balloonContentFooter": _sports.join('; '),
                                 "clusterCaption": el.name, //подпись и слева и справа
                                 "hintContent": "<strong>Текст  <s>подсказки</s></strong>"
                             },
@@ -146,7 +147,7 @@ export default {
         },
         relations() {
             this.paintMap();
-        }
+        },
     },
     beforeMount() {
         //ИНИЦИИРУЕМ КАРТУ
