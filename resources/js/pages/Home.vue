@@ -100,7 +100,6 @@ export default {
                 for (let i = 0, count_per_step = 1000, pool = [...this.sport_objects]; i < 5000; i += count_per_step) {
                     let data = [];
                     pool.slice(i, i + count_per_step).map(el => {
-                        console.log(this.sports_of_object(el.id));
                         let _sports = [];
 
                         this.sports_of_object(el.id).map(e => {
@@ -119,7 +118,7 @@ export default {
                                 "balloonContent": 'balloonContent',
                                 "balloonContentHeader": el.name,
                                 "balloonContentBody": "<p>ЗДЕСЬ БУДУТ ПЕРЕЧИСЛЕНЫ СПОРТ ОБЪЕКТЫ, ВОЗМОЖНО, С ЧЕМТО ЕЩЁ</p>",
-                                "balloonContentFooter": _sports.join('; '),
+                                "balloonContentFooter": [...new Set(_sports)].join('; '),
                                 "clusterCaption": el.name, //подпись и слева и справа
                                 "hintContent": "<strong>Текст  <s>подсказки</s></strong>"
                             },
