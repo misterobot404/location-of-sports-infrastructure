@@ -11,8 +11,7 @@ export default {
             return rel ? rel.id_sport : -1;
         },
         getSportsBySportObjectId: state => id => {
-            let rel = state.relations.filter(el => el.id_object === id);
-            return rel;
+            return state.relations.filter(el => el.id_object === id);
         },
     },
     actions: {

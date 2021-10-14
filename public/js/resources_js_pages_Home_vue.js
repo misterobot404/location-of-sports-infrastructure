@@ -49,6 +49,9 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 //
 //
 //
+//
+//
+//
 
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   name: "Home",
@@ -58,144 +61,157 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
       // map
       myMap: null,
       gridSize: 91,
-      paintCircles: false
+      paintCircles: false,
+      listBoxControl: null
     };
   },
-  computed: _objectSpread(_objectSpread(_objectSpread(_objectSpread(_objectSpread(_objectSpread(_objectSpread({}, (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapState)('sport_objects', ["sport_objects"])), (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapState)('sports', ["sports"])), (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapState)('relations', ["relations"])), (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapGetters)('sport_objects', ["getSportObjectById"])), (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapGetters)('relations', ["getSportIdBySportObjectId"])), (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapGetters)('sports', ["getSportById"])), {}, {
-    ready: function ready() {
+  computed: _objectSpread(_objectSpread(_objectSpread({}, (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapState)({
+    sport_objects: function sport_objects(state) {
+      return state.sport_objects.sport_objects;
+    },
+    sports: function sports(state) {
+      return state.sports.sports;
+    },
+    relations: function relations(state) {
+      return state.relations.relations;
+    }
+  })), (0,vuex__WEBPACK_IMPORTED_MODULE_0__.mapGetters)({
+    getSportObjectById: "sport_objects/getSportObjectById",
+    getSportIdBySportObjectId: "relations/getSportIdBySportObjectId",
+    getSportById: "sports/getSportById",
+    sports_of_object: "relations/getSportsBySportObjectId"
+  })), {}, {
+    dataReady: function dataReady() {
       return this.sport_objects && this.sports && this.relations;
     }
   }),
   methods: {
-    paintMap: function paintMap() {
+    paintObjects: function paintObjects() {
       var _this = this;
 
-      if (this.ready) {
-        (function () {
-          var getFilterFunction = function getFilterFunction(categories) {
-            return function (obj) {
-              var content = obj.properties.balloonContent;
-              return categories[content];
-            };
-          };
+      // Создаём объект ObjectManager для отображения, кластеризации и управления видимостью объектов
+      var objectManager = new ymaps.ObjectManager({
+        // Чтобы метки начали кластеризоваться, выставляем опцию.
+        clusterize: !this.paintCircles,
+        // ObjectManager принимает те же опции, что и кластеризатор.
+        gridSize: this.gridSize,
+        // Макет метки кластера pieChart.
+        clusterIconLayout: "default#pieChart",
+        // Отображение списка объектов при клике на кластер
+        clusterDisableClickZoom: true
+      });
+      this.myMap.geoObjects.removeAll();
+      this.myMap.geoObjects.add(objectManager); // Применяем к ObjectManager фильтр
 
-          var objectManager = new ymaps.ObjectManager({
-            // Чтобы метки начали кластеризоваться, выставляем опцию.
-            clusterize: !_this.paintCircles,
-            // ObjectManager принимает те же опции, что и кластеризатор.
-            gridSize: _this.gridSize,
-            // Макет метки кластера pieChart.
-            clusterIconLayout: "default#pieChart"
+      var filterMonitor = new ymaps.Monitor(this.listBoxControl.state);
+      filterMonitor.add('filters', function (filters) {
+        objectManager.setFilter(getFilterFunction(filters));
+      });
+
+      function getFilterFunction(categories) {
+        return function (obj) {
+          var content = obj.properties.balloonContentFooter;
+          return categories[content];
+        };
+      } // Порционная отрисовка объектов
+
+
+      var _loop = function _loop(i, count_per_step, pool) {
+        var data = [];
+        pool.slice(i, i + count_per_step).map(function (el) {
+          var _sports = [];
+
+          _this.sports_of_object(el.id).forEach(function (e) {
+            var _this$getSportById;
+
+            _sports.push((_this$getSportById = _this.getSportById(e.id_sport)) === null || _this$getSportById === void 0 ? void 0 : _this$getSportById.name);
           });
 
-          _this.myMap.geoObjects.removeAll();
-
-          _this.myMap.geoObjects.add(objectManager);
-
-          var listBoxItems = _this.sports.map(function (sport) {
-            return new ymaps.control.ListBoxItem({
-              data: {
-                content: sport.name
-              },
-              state: {
-                selected: true
-              }
-            });
-          }),
-              reducer = function reducer(filters, filter) {
-            filters[filter.data.get('content')] = filter.isSelected();
-            return filters;
-          },
-              // Теперь создадим список, содержащий 5 пунктов.
-          listBoxControl = new ymaps.control.ListBox({
-            data: {
-              content: 'Фильтр по видам спорта',
-              title: 'Фильтр'
+          data.push({
+            type: "Feature",
+            id: el.id,
+            geometry: {
+              coordinates: el.coordinates.replace(/^\(|\)$/g, '').split(','),
+              type: _this.paintCircles ? "Circle" : "Point",
+              radius: 1000
             },
-            items: listBoxItems,
-            state: {
-              // Признак, развернут ли список.
-              expanded: false,
-              filters: listBoxItems.reduce(reducer, {})
+            properties: {
+              "balloonContent": "balloonContent",
+              "balloonContentHeader": el.name,
+              "balloonContentBody": "<p>ЗДЕСЬ БУДУТ ПЕРЕЧИСЛЕНЫ СПОРТ ОБЪЕКТЫ, ВОЗМОЖНО, С ЧЕМТО ЕЩЁ</p>",
+              "balloonContentFooter": _toConsumableArray(new Set(_sports)).join('; '),
+              "clusterCaption": el.name,
+              //подпись и слева и справа
+              "hintContent": "<strong>Текст  <s>подсказки</s></strong>"
+            },
+            options: {
+              "preset": "islands#blueCircleDotIconWithCaption"
             }
           });
+        });
+        setTimeout(function () {
+          return objectManager.add(data);
+        }, _this.paintCircles === "Circle" ? 300 : 100);
+      };
 
-          _this.myMap.controls.add(listBoxControl); // Добавим отслеживание изменения признака, выбран ли пункт списка.
-
-
-          listBoxControl.events.add(['select', 'deselect'], function (e) {
-            var listBoxItem = e.get('target');
-            var filters = ymaps.util.extend({}, listBoxControl.state.get('filters'));
-            filters[listBoxItem.data.get('content')] = listBoxItem.isSelected();
-            listBoxControl.state.set('filters', filters);
-          });
-          var filterMonitor = new ymaps.Monitor(listBoxControl.state);
-          filterMonitor.add('filters', function (filters) {
-            // Применим фильтр.
-            objectManager.setFilter(getFilterFunction(filters));
-          });
-
-          var _loop = function _loop(i, count_per_step, pool) {
-            var data = [];
-            pool.slice(i, i + count_per_step).map(function (el) {
-              data.push({
-                type: "Feature",
-                id: el.id,
-                geometry: {
-                  coordinates: el.coordinates.replace(/^\(|\)$/g, '').split(','),
-                  type: _this.paintCircles ? "Circle" : "Point",
-                  radius: 1000
-                },
-                properties: {
-                  "balloonContent": _this.getSportById(_this.getSportIdBySportObjectId(el.id)).name,
-                  "balloonContentHeader": el.name,
-                  "balloonContentBody": "<p>ЗДЕСЬ НУЖНО ОПИСАНИЕ ОБЪЕКТА КАКОЕ_ТО</p>",
-                  "balloonContentFooter": "<font size=1>Информация предоставлена: </font> <strong>этим балуном</strong>",
-                  "clusterCaption": el.name,
-                  //подпись и слева и справа
-                  "hintContent": "<strong>Текст  <s>подсказки</s></strong>"
-                },
-                options: {
-                  "preset": "islands#blueCircleDotIconWithCaption"
-                }
-              });
-            });
-            setTimeout(function () {
-              objectManager.add(data);
-            }, _this.paintCircles === "Circle" ? 200 : 100);
-          };
-
-          for (var i = 0, count_per_step = 1000, pool = _toConsumableArray(_this.sport_objects); i < 5000; i += count_per_step) {
-            _loop(i, count_per_step, pool);
-          }
-        })();
+      for (var i = 0, count_per_step = 200, pool = _toConsumableArray(this.sport_objects); i < 1000; i += count_per_step) {
+        _loop(i, count_per_step, pool);
       }
-    }
-  },
-  watch: {
-    paintCircles: function paintCircles() {
-      this.paintMap();
-    },
-    sport_objects: function sport_objects() {
-      this.paintMap();
-    },
-    sports: function sports() {
-      this.paintMap();
-    },
-    relations: function relations() {
-      this.paintMap();
     }
   },
   beforeMount: function beforeMount() {
     var _this2 = this;
 
-    //ИНИЦИИРУЕМ КАРТУ
+    // Создание карты
     ymaps.ready(['util.calculateArea']).then(function () {
       _this2.myMap = new ymaps.Map('map', {
-        // используется перевернутый порядок координат (longlat)
         center: [55.76, 37.64],
         zoom: 10
+      }); // Добавляем список для выбора видов спорта
+
+      var listBoxItems = _this2.sports.map(function (sport) {
+        return new ymaps.control.ListBoxItem({
+          data: {
+            content: sport.name
+          },
+          state: {
+            selected: false
+          }
+        });
+      }),
+          reducer = function reducer(filters, filter) {
+        filters[filter.data.get('content')] = filter.isSelected();
+        return filters;
+      },
+          listBoxControl = new ymaps.control.ListBox({
+        data: {
+          content: 'Фильтр по видам спорта',
+          title: 'Фильтр'
+        },
+        items: listBoxItems,
+        state: {
+          // Признак, развернут ли список.
+          expanded: false,
+          filters: listBoxItems.reduce(reducer, {})
+        }
       });
+
+      _this2.listBoxControl = listBoxControl;
+
+      _this2.myMap.controls.add(listBoxControl);
+
+      listBoxControl.events.add(['select', 'deselect'], function (e) {
+        var listBoxItem = e.get('target');
+        var filters = ymaps.util.extend({}, listBoxControl.state.get('filters'));
+        filters[listBoxItem.data.get('content')] = listBoxItem.isSelected();
+        listBoxControl.state.set('filters', filters);
+      });
+    }); // Следим за изменением данных для отрисовки объектов
+
+    this.$watch(function (vm) {
+      return [vm.sport_objects, vm.sports, vm.relations, vm.paintCircles];
+    }, function (_) {
+      if (_this2.dataReady) _this2.paintObjects();
     });
   }
 });
@@ -218,7 +234,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_laravel_mix_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_0___default()(function(i){return i[1]});
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, "\n.filter__container[data-v-b3c5cf30] {\n    display: flex;\n}\n.filter__container .filter[data-v-b3c5cf30] {\n    padding: 5px;\n    width: 200px;\n}\n.map__container[data-v-b3c5cf30] {\n    align-content: center;\n    height: 800px;\n    width: 800px;\n    border: 1px solid black;\n}\n", ""]);
+___CSS_LOADER_EXPORT___.push([module.id, "\n.filter__container[data-v-b3c5cf30] {\n    display: flex;\n}\n.filter__container .filter[data-v-b3c5cf30] {\n    padding: 5px;\n    width: 200px;\n}\n.map__container[data-v-b3c5cf30] {\n    align-content: center;\n    height: 800px;\n    width: 800px;\n    border: 1px solid black;\n}\n\n/* Loader */\n.loader[data-v-b3c5cf30] {\n    position: fixed;\n    transform: translate(-50%, -50%);\n    top: 50%;\n    left: 50%;\n}\n.loader circle[data-v-b3c5cf30] {\n    transform-origin: center;\n    transform-box: fill-box;\n    transform-origin: center;\n    -webkit-animation: rotate-data-v-b3c5cf30 linear infinite;\n            animation: rotate-data-v-b3c5cf30 linear infinite;\n}\n.loader circle[data-v-b3c5cf30]:nth-child(1) {\n    -webkit-animation-duration: 1.6s;\n            animation-duration: 1.6s;\n}\n.loader circle[data-v-b3c5cf30]:nth-child(2) {\n    -webkit-animation-duration: 1.2s;\n            animation-duration: 1.2s;\n}\n.loader circle[data-v-b3c5cf30]:nth-child(3) {\n    -webkit-animation-duration: 0.8s;\n            animation-duration: 0.8s;\n}\n@-webkit-keyframes rotate-data-v-b3c5cf30 {\n100% {\n        transform: rotate(360deg);\n}\n}\n@keyframes rotate-data-v-b3c5cf30 {\n100% {\n        transform: rotate(360deg);\n}\n}\n.loader svg[data-v-b3c5cf30] {\n    width: 100px;\n    height: 100px;\n}\n\n", ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -356,11 +372,67 @@ var render = function() {
     "section",
     { staticStyle: { display: "flex", "justify-content": "center" } },
     [
+      !_vm.dataReady
+        ? _c(
+            "div",
+            { staticClass: "loader", staticStyle: { "text-align": "center" } },
+            [
+              _c("svg", [
+                _c("circle", {
+                  attrs: {
+                    cx: "50",
+                    cy: "50",
+                    r: "40",
+                    stroke: "red",
+                    "stroke-dasharray": "78.5 235.5",
+                    "stroke-width": "3",
+                    fill: "none"
+                  }
+                }),
+                _vm._v(" "),
+                _c("circle", {
+                  attrs: {
+                    cx: "50",
+                    cy: "50",
+                    r: "30",
+                    stroke: "blue",
+                    "stroke-dasharray": "62.8 188.8",
+                    "stroke-width": "3",
+                    fill: "none"
+                  }
+                }),
+                _vm._v(" "),
+                _c("circle", {
+                  attrs: {
+                    cx: "50",
+                    cy: "50",
+                    r: "20",
+                    stroke: "green",
+                    "stroke-dasharray": "47.1 141.3",
+                    "stroke-width": "3",
+                    fill: "none"
+                  }
+                })
+              ]),
+              _vm._v(" "),
+              _c("h2", [_vm._v("Загрузка данных...")])
+            ]
+          )
+        : _vm._e(),
+      _vm._v(" "),
       _c(
         "div",
+        {
+          directives: [
+            {
+              name: "show",
+              rawName: "v-show",
+              value: _vm.dataReady,
+              expression: "dataReady"
+            }
+          ]
+        },
         [
-          _vm._m(0),
-          _vm._v(" "),
           _c("input", {
             directives: [
               {
@@ -449,24 +521,7 @@ var render = function() {
     ]
   )
 }
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "filter__container container" }, [
-      _c("input", { staticClass: "filter", attrs: { placeholder: "Поиск" } }),
-      _vm._v(" "),
-      _c("br"),
-      _vm._v(" "),
-      _c("select", { staticClass: "filter" }),
-      _vm._v(" "),
-      _c("select", { staticClass: "filter" }),
-      _vm._v(" "),
-      _c("select", { staticClass: "filter" })
-    ])
-  }
-]
+var staticRenderFns = []
 render._withStripped = true
 
 

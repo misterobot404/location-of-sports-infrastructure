@@ -2349,11 +2349,17 @@ __webpack_require__.r(__webpack_exports__);
   getters: {
     getSportIdBySportObjectId: function getSportIdBySportObjectId(state) {
       return function (id) {
-        console.log(id);
         var rel = state.relations.find(function (el) {
           return el.id_object === id;
         });
-        return rel.id_sport;
+        return rel ? rel.id_sport : -1;
+      };
+    },
+    getSportsBySportObjectId: function getSportsBySportObjectId(state) {
+      return function (id) {
+        return state.relations.filter(function (el) {
+          return el.id_object === id;
+        });
       };
     }
   },
@@ -2482,7 +2488,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_laravel_mix_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_0___default()(function(i){return i[1]});
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, "\n*[data-v-f348271a] {\r\n    margin: 0;\r\n    padding: 0;\r\n    box-sizing: border-box;\n}\r\n", ""]);
+___CSS_LOADER_EXPORT___.push([module.id, "\n*[data-v-f348271a] {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n", ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -3314,6 +3320,7 @@ var render = function() {
   var _c = _vm._self._c || _h
   return _c(
     "div",
+    { staticStyle: { "min-height": "100%" } },
     [
       _c("section", [_c("my-navbar")], 1),
       _vm._v(" "),
