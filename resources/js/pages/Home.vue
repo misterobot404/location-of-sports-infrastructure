@@ -8,6 +8,7 @@
             <label>Регионы: <input type="checkbox" v-model="doPaintRegions"/></label>
             <label>Хитмап объектов: <input type="checkbox" v-model="doPaintSpHeatmap"/></label>
             <label>Хитмап населения: <input type="checkbox" v-model="doPaintPopHeatmap"/></label>
+            <label>Доступность: <input type="checkbox" v-model="doPaintCircles"/></label>
             <div class="map__container container" id='map'/>
         </div>
     </section>
@@ -23,16 +24,23 @@ export default {
         return {
             sport_object_id: null,
             myMap: null, //карта
+
             mainLayer: null, //главный слой (кластер)
             gridSize: 91, //сила кластеризации
+
             doPaintRegions: true, //выводить ли регионы
             regionsOverlay: null, //оверлей регионов
+
             doPaintSpHeatmap: false, //выводить ли хитмап по объектам
             spHeatmap: null, //объект хитмапа
+
             doPaintPopHeatmap: false, //выводить ли хитмап по населению
             popHeatmap: null, //хитмап населения,
-            loaded: 0,
-            total: 0,
+
+            doPaintCircles: false, //выводить ли зоны доступности вместо объектов
+            circlesOverlay: null, //оверлей для зон доступности
+
+            loaded: 0, total: 0, //для прогрессбара
         }
     },
     computed: {
@@ -49,11 +57,23 @@ export default {
                 return this.mainLayer;
             }
         },
+        circlesObjectManager: {
+            get () {
+                if (this.circlesOverlay == null){
+                    this.circlesOverlay = new ymaps.ObjectManager({
+                        clusterize: false, //кластеризация меток
+                        gridSize: this.gridSize,
+                        clusterIconLayout: "default#pieChart"
+                    });
+                    this.myMap.geoObjects.add(this.circlesOverlay);
+                }
+                return this.circlesOverlay;
+            }
+        },
         regionsManager: {
             get () {
                 if (this.regionsOverlay == null){
-                    this.regionsOverlay = new ymaps.GeoObjectCollection({}, {
-                    });
+                    this.regionsOverlay = new ymaps.GeoObjectCollection({}, {});
                     this.myMap.geoObjects.add(this.regionsOverlay);
                 }
                 return this.regionsOverlay;
@@ -82,19 +102,12 @@ export default {
                                 geometry: {
                                     type: "Polygon",
                                     coordinates: [
-                                        // The coordinates of the vertices of the external contour.
                                         coord[0]
                                     ]
                                 },
                                 // Описываем свойства геообъекта.
                                 properties: {
                                     // Содержимое балуна.
-                                    /*
-                                    balloonContent: feature.properties.NAME,
-                                    "balloonContentHeader": feature.properties.NAME,
-                                    "balloonContentBody": "<p>ЗДЕСЬ БУДЕТ ИНФА О РАЙОНЕ/p>",
-                                    "balloonContentFooter": "123123123",
-                                    */
                                     "hintContent": "Выбрать: " + feature.properties.NAME,
                                     infoHTML: '<h2>' + feature.properties.NAME +'</h2>'
                                         + '<p>Население:</p>'
@@ -205,7 +218,7 @@ export default {
                 id: el.id,
                 geometry: {
                     coordinates: el.coordinates.replace(/^\(|\)$/g, '').split(','),
-                    type: this.paintCircles ? "Circle" : "Point",
+                    type: this.doPaintCircles ? "Circle" : "Point",
                     radius: 1000,
                 },
                 properties: {
@@ -225,22 +238,20 @@ export default {
             this.loaded = ++ind;
 
             setTimeout(() => {
-                this.mainObjectManager.add(data);
+                if (!this.doPaintCircles)
+                    this.mainObjectManager.add(data);
+                else
+                    this.circlesObjectManager.add(data);
             });
-            if(ind < this.sport_objects.length)
+            if(ind < 20)
                 setTimeout(() => {
                     this.paintPoints(this.loaded);
                 });
         },
         paintMap() {
             if (this.ready) {
-                this.total = this.sport_objects.length;
                 this.mainObjectManager.removeAll();
-
-                setTimeout(() => {
-                    if (this.doPaintRegions)
-                        this.paintRegions();
-                });
+                this.circlesObjectManager.removeAll();
 
                 setTimeout(() => {
                     this.paintPoints();
@@ -258,7 +269,11 @@ export default {
         doPaintPopHeatmap() {
             this.paintPopulationHeatmap();
         },
+        doPaintCircles() {
+            this.paintMap();
+        },
         sport_objects() {
+            this.total = this.sport_objects.length;
             this.paintMap();
         },
         sports() {
@@ -275,6 +290,10 @@ export default {
                 // используется перевернутый порядок координат (longlat)
                 center: [55.76, 37.64],
                 zoom: 10,
+            });
+            setTimeout(() => {
+                if (this.doPaintRegions)
+                    this.paintRegions();
             });
         })
     }
