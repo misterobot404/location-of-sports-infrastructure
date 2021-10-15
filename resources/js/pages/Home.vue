@@ -13,7 +13,7 @@
         <v-row v-show="sport_objects">
             <!-- Left -->
             <v-col cols="4" class="pl-5">
-                <progress :value="loaded" max="10000" style="width: 100%"/>
+                <progress :value="loaded" :max="total" style="width: 100%"/>
                 <v-select
                     v-model="selected_types_of_sports"
                     :items="sports ?
@@ -96,7 +96,7 @@ export default {
             myMap: null,
             gridSize: 91,
             sport_object_id: null,
-            loaded: 0,
+            loaded: 0, total: 0,
 
             doPaintRegions: false, //выводить ли регионы
             regionsOverlay: null, //оверлей регионов
@@ -106,6 +106,8 @@ export default {
 
             doPaintPopHeatmap: false, //выводить ли хитмап по населению
             popHeatmap: null, //хитмап населения
+
+            doPaintCircles: false,
         }
     },
     computed: {
@@ -140,6 +142,8 @@ export default {
         // Рисование объектов
         // Спортивные объекты (в виде точек или кругов доступности)
         paintObjects() {
+            this.loaded = 0;
+            this.myMap.geoObjects.removeAll();
             // Создаём объект ObjectManager для отображения, кластеризации и управления видимостью объектов
             let objectManager = new ymaps.ObjectManager({
                 // Чтобы метки начали кластеризоваться, выставляем опцию.
@@ -151,26 +155,57 @@ export default {
                 // Отображение списка объектов при клике на кластер
                 clusterDisableClickZoom: true
             });
-            this.myMap.geoObjects.removeAll();
             this.myMap.geoObjects.add(objectManager);
 
             // Порционная отрисовка объектов
-            for (let i = 0, count_per_step = 1000; i < this.filteredSportObjects.length; i += count_per_step) {
-                let data = [];
+
+            for (var i = 0, count_per_step = 100, len = this.filteredSportObjects.length; i < len; i += count_per_step) {
+                let data = []; let processed = 0;
                 this.filteredSportObjects.slice(i, i + count_per_step).map(el => {
+                    processed ++;
+                    let _szones = [], _sports = [], _szonesHTML = '', _sportsHTML = '';
+
+                    el.params.map(_sz => {
+                        if (_sz){
+                            _szones.push(_sz.sportzone_type_name);
+                            _sports.push(_sz.sport);
+                        }
+                    });
+
+                    if (_szones.length > 0){
+                        _szonesHTML += '<label>Состав:</label>';
+                        _szonesHTML += '<ul>';
+                        [...new Set(_szones)].map(e => {
+                            _szonesHTML += `<li>${e}</li>`;
+                        });
+                        _szonesHTML += '</ul>'
+                    }
+
+                    if (_sports.length > 0){
+                        _sportsHTML += '<label>Виды спорта:</label>';
+                        _sportsHTML += '<ul>';
+                        [...new Set(_sports)].map(e => {
+                            _sportsHTML += `<li>${e}</li>`;
+                        });
+                        _sportsHTML += '</ul>'
+                    }
                     data.push({
                         type: "Feature",
                         id: el.object_id,
                         geometry: {
                             coordinates: el.object_coordinates.replace(/^\(|\)$/g, '').split(','),
-                            type: this.paintCircles ? "Circle" : "Point",
-                            radius: 1000,
+                            type: this.doPaintCircles ? "Circle" : "Point",
+                            radius: el.accessibility_radius,
                         },
                         properties: {
                             "balloonContent": "balloonContent",
                             "balloonContentHeader": el.object_name,
-                            "balloonContentBody": "<p>ЗДЕСЬ БУДУТ ПЕРЕЧИСЛЕНЫ СПОРТ ОБЪЕКТЫ, ВОЗМОЖНО, С ЧЕМТО ЕЩЁ</p>",
-                            "balloonContentFooter": "",
+                            "balloonContentBody":
+                                '<p>Доступность: ' + el.accessibility_name + '</p>'
+                                + _szonesHTML
+                                + _sportsHTML
+                                ,
+                            "balloonContentFooter": 'Ведомство: ' + el.organisation_name,
                             "clusterCaption": el.object_name, //подпись и слева и справа
                             "hintContent": "<strong>Текст  <s>подсказки</s></strong>"
                         },
@@ -180,13 +215,14 @@ export default {
                     });
                 });
                 setTimeout(() => {
-                    this.loaded = i + count_per_step;
+                    this.loaded += processed;
                     objectManager.add(data);
-                }, this.paintCircles === "Circle" ? 300 : 100)
+                });
             }
         },
         // Регионы москвы
         paintRegions() {
+            if (this.regionsManager) this.regionsManager.removeAll();
             if (this.doPaintRegions) {
                 //добавить регионы
                 regions_geo.features.map(feature => {
@@ -232,10 +268,10 @@ export default {
                     }
                 });
             }
-            else this.regionsManager.removeAll();
         },
         // Хитмап населения
         paintPopulationHeatmap() {
+            if (this.popHeatmap) this.popHeatmap.destroy();
             if (this.doPaintPopHeatmap) {
                 let pool = population_heatmaps['RECORDS'];
                 ymaps.modules.require(['Heatmap'], Heatmap => {
@@ -265,10 +301,10 @@ export default {
                     this.popHeatmap.setMap(this.myMap);
                 });
             }
-            else this.popHeatmap.destroy();
         },
         // Хитмап спортивных объектов
         paintSportHeatmap() {
+            if (this.spHeatmap) this.spHeatmap.destroy();
             if (this.doPaintSpHeatmap) {
                 let pool = [...this.filteredSportObjects];
                 ymaps.modules.require(['Heatmap'], Heatmap => {
@@ -297,14 +333,14 @@ export default {
                     this.spHeatmap.setMap(this.myMap);
                 });
             }
-            else this.spHeatmap.destroy();
         }
     },
     watch: {
         // Перерисовка объектов на карте
-        // TODO При изменении данных из фильтра перерисовывать хитмап спортивных объектов
         filteredSportObjects(v) {
+            this.total = v.length;
             if (v) this.paintObjects();
+            this.paintSportHeatmap();
         },
         doPaintCircles() {
             this.paintObjects();
@@ -329,7 +365,7 @@ export default {
                 zoom: 10,
             });
         });
-    }
+    },
 }
 </script>
 

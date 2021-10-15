@@ -15,7 +15,7 @@ export default {
             // Send request
             return axios.get('/api/sport-objects')
                 .then(response => {
-                    commit('SET_SPORT_OBJECTS', response.data.sport_objects.slice(0,10000).map(sport_object => {
+                    commit('SET_SPORT_OBJECTS', response.data.sport_objects.map(sport_object => {
                         sport_object.params = JSON.parse(sport_object.params);
                         return sport_object;
                     }));
