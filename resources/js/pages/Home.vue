@@ -63,6 +63,15 @@
                         Перейти
                     </v-btn>
                 </div>
+                <div ref='region_info' style="width:25%; float:left;">
+                </div>
+                <div style="margin-left:25%;">
+                    <progress :value="loaded" :max="total"></progress>
+                    <br/>
+                    <label>Регионы: <input type="checkbox" v-model="doPaintRegions"/></label>
+                    <label>Хитмап объектов: <input type="checkbox" v-model="doPaintSpHeatmap"/></label>
+                    <label>Хитмап населения: <input type="checkbox" v-model="doPaintPopHeatmap"/></label>
+                </div>
             </v-col>
             <!-- Right -->
             <v-col cols="8" class="pa-0">
@@ -74,6 +83,8 @@
 
 <script>
 import {mapState} from "vuex"
+import regions_geo from '../regions_geo.json'
+import population_heatmaps from '../population_heatmaps.json'
 
 export default {
     name: "Home",
@@ -87,7 +98,16 @@ export default {
             myMap: null,
             gridSize: 91,
             paintCircles: false,
-            listBoxControl: null,
+            sport_object_id: null,
+            /*mainLayer: null, //главный слой (кластер)
+            doPaintRegions: true, //выводить ли регионы
+            regionsOverlay: null, //оверлей регионов
+            doPaintSpHeatmap: false, //выводить ли хитмап по объектам
+            spHeatmap: null, //объект хитмапа
+            doPaintPopHeatmap: false, //выводить ли хитмап по населению
+            popHeatmap: null, //хитмап населения,
+            loaded: 0,
+            total: 0,*/
         }
     },
     computed: {
@@ -108,7 +128,30 @@ export default {
                     })
                 else return this.sport_objects;
             } else return false;
-        }
+        },
+        /*mainObjectManager: {
+            get () {
+                if (this.mainLayer == null){
+                    this.mainLayer = new ymaps.ObjectManager({
+                        clusterize: true, //кластеризация меток
+                        gridSize: this.gridSize,
+                        clusterIconLayout: "default#pieChart"
+                    });
+                    this.myMap.geoObjects.add(this.mainLayer);
+                }
+                return this.mainLayer;
+            }
+        },
+        regionsManager: {
+            get () {
+                if (this.regionsOverlay == null){
+                    this.regionsOverlay = new ymaps.GeoObjectCollection({}, {
+                    });
+                    this.myMap.geoObjects.add(this.regionsOverlay);
+                }
+                return this.regionsOverlay;
+            }
+        },*/
     },
     methods: {
         paintObjects() {
@@ -153,7 +196,183 @@ export default {
                 });
                 setTimeout(() => objectManager.add(data), this.paintCircles === "Circle" ? 300 : 100);
             }
-        }
+        },
+        /*//РЕГИОНЫ МОСКВЫ
+        paintRegions() {
+            if (this.doPaintRegions){
+                //добавить регионы
+                regions_geo.features.map(feature => {
+                    if (typeof (feature.geo_reverse.coordinates) == 'object'){
+                        feature.geo_reverse.coordinates.map(coord => {
+                            var myGeoObject = new ymaps.GeoObject({
+                                geometry: {
+                                    type: "Polygon",
+                                    coordinates: [
+                                        // The coordinates of the vertices of the external contour.
+                                        coord[0]
+                                    ]
+                                },
+                                // Описываем свойства геообъекта.
+                                properties: {
+                                    // Содержимое балуна.
+                                    /!*
+                                    balloonContent: feature.properties.NAME,
+                                    "balloonContentHeader": feature.properties.NAME,
+                                    "balloonContentBody": "<p>ЗДЕСЬ БУДЕТ ИНФА О РАЙОНЕ/p>",
+                                    "balloonContentFooter": "123123123",
+                                    *!/
+                                    "hintContent": "Выбрать: " + feature.properties.NAME,
+                                    infoHTML: '<h2>' + feature.properties.NAME +'</h2>'
+                                        + '<p>Население:</p>'
+                                        + '<p>Площадь:</p>'
+                                        + '<p>Плотность населения:</p>'
+                                        + '<p>Количество спорт объектов:</p>'
+                                    ,
+                                }
+                            }, {
+                                fillColor: 'rgba(0, 0, 255, 0)',
+                                strokeColor: '#000000',//`rgb(${[1,2,3].map(x=>Math.random()*256|0)})`,
+                                opacity: 0.5,
+                                strokeWidth: 2,
+                            });
+                            myGeoObject.events.add('click', e => {
+                                e.preventDefault();
+                                let _me = e.get('target');
+                                this.$refs.region_info.innerHTML = _me.properties.get('infoHTML');
+                            });
+                            this.regionsManager.add(myGeoObject);
+                        });
+                    }
+                });
+            }
+            else{
+                //удалить слой регионов
+                this.regionsManager.removeAll();
+            }
+        },
+        //ХИТМАП СПОРТ ОБЪЕКТОВ
+        paintSportHeatmap() {
+            if (this.doPaintSpHeatmap){
+                let pool = [...this.sport_objects];
+                ymaps.modules.require(['Heatmap'], Heatmap => {
+                    let heatmapdata = [];
+                    for (var i = 0; i < pool.length; i++) {
+                        if (pool[i] && pool[i].coordinates){
+                            let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
+                            heatmapdata.push([parseFloat(coord[0]), parseFloat(coord[1])]);
+                        }
+                    }
+                    this.spHeatmap = new Heatmap(heatmapdata, {
+                        // Радиус влияния.
+                        radius: 10,
+                        // Нужно ли уменьшать пиксельный размер точек при уменьшении зума. False - не нужно.
+                        dissipating: false,
+                        // Прозрачность тепловой карты.
+                        opacity: 0.75,
+                        // JSON описание градиента.
+                        gradient: {
+                            0.1: 'rgba(50, 0, 0, 0.25)', //внешняя область
+                            0.2: 'rgba(254, 220, 62, 1)',
+                            0.7: 'rgba(255, 172, 0, 1)',
+                            1.0: 'rgba(255, 0, 0, 1)'
+                        }
+                    });
+                    this.spHeatmap.setMap(this.myMap);
+                });
+            }
+            else{
+                this.spHeatmap.destroy();
+            }
+        },
+        //ХИТМАП НАСЕЛЕНИЯ
+        paintPopulationHeatmap() {
+            if (this.doPaintPopHeatmap){
+                let pool = population_heatmaps['RECORDS'];
+                ymaps.modules.require(['Heatmap'], Heatmap => {
+                    let heatmapdata = [];
+                    for (var i = 0; i < pool.length; i++) {
+                        if (pool[i] && pool[i].coordinates && pool[i].count_persons){
+                            let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
+                            //for (var j = 1; j < pool[i].count_persons; j++)
+                            heatmapdata.push([parseFloat(coord[0]), parseFloat(coord[1])]);
+                        }
+                    }
+                    this.popHeatmap = new Heatmap(heatmapdata, {
+                        // Радиус влияния.
+                        radius: 15,
+                        // Нужно ли уменьшать пиксельный размер точек при уменьшении зума. False - не нужно.
+                        dissipating: false,
+                        // Прозрачность тепловой карты.
+                        opacity: 0.75,
+                        // JSON описание градиента.
+                        gradient: {
+                            0.1: 'rgba(50, 0, 0, 0.25)', //внешняя область
+                            0.2: 'rgba(254, 220, 62, 1)',
+                            0.7: 'rgba(255, 172, 0, 1)',
+                            1.0: 'rgba(255, 0, 0, 1)'
+                        }
+                    });
+                    this.popHeatmap.setMap(this.myMap);
+                });
+            }
+            else{
+                this.popHeatmap.destroy();
+            }
+        },
+        paintPoints(ind = 0){
+            let el = [...this.sport_objects][ind];
+            let _sports = [];
+            this.sports_of_object(el.id).map(e => {
+                _sports.push(this.getSportById(e.id_sport)?.name);
+            });
+
+            let data = {
+                type: "Feature",
+                id: el.id,
+                geometry: {
+                    coordinates: el.coordinates.replace(/^\(|\)$/g, '').split(','),
+                    type: this.paintCircles ? "Circle" : "Point",
+                    radius: 1000,
+                },
+                properties: {
+                    "balloonContent": 'balloonContent',
+                    "balloonContentHeader": el.name,
+                    "balloonContentBody": "<p>ЗДЕСЬ БУДУТ ПЕРЕЧИСЛЕНЫ СПОРТ ОБЪЕКТЫ, ВОЗМОЖНО, С ЧЕМТО ЕЩЁ</p>",
+                    "balloonContentFooter": [...new Set(_sports)].join('; '),
+                    "clusterCaption": el.name, //подпись и слева и справа
+                    "hintContent": "<strong>Текст  <s>подсказки</s></strong>"
+                },
+                options: {
+                    "preset": "islands#blueCircleDotIconWithCaption"
+                }
+            };
+
+            this.progress = Math.floor(ind / this.sport_objects.length * 100);
+            this.loaded = ++ind;
+
+            setTimeout(() => {
+                this.mainObjectManager.add(data);
+            });
+            if(ind < this.sport_objects.length)
+                setTimeout(() => {
+                    this.paintPoints(this.loaded);
+                });
+        },
+        paintMap() {
+            if (this.ready) {
+                this.total = this.sport_objects.length;
+                this.mainObjectManager.removeAll();
+
+                setTimeout(() => {
+                    if (this.doPaintRegions)
+                        this.paintRegions();
+                });
+
+                setTimeout(() => {
+                    this.paintPoints();
+                });
+            }
+        }*/
     },
     watch: {
         paintCircles() {
@@ -161,7 +380,19 @@ export default {
         },
         filteredSportObjects(v) {
             if (v) this.paintObjects();
-        }
+        },
+        /*doPaintRegions() {
+            this.paintRegions();
+        },
+        doPaintSpHeatmap() {
+            this.paintSportHeatmap();
+        },
+        doPaintPopHeatmap() {
+            this.paintPopulationHeatmap();
+        },
+        sport_objects() {
+            this.paintMap();
+        },*/
     },
     beforeMount() {
         // Создание карты
