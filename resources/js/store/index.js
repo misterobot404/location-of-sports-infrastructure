@@ -12,6 +12,9 @@ import organisations from "./modules/organisations";
 
 export default new Vuex.Store({
     strict: true,
+    state: {
+        currentRegion: 0
+    },
     modules: {
         sports,
         relations,

@@ -14,7 +14,7 @@ export const routes = [
     },
     {
         // Страница с информацией по объекту
-        name: 'Sport Objects',
+        //name: 'Sport Objects',
         path: '/sport-objects/:id?',
         component: () => import('../pages/ObjectInfo'),
     },
