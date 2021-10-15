@@ -6,11 +6,7 @@ export default {
         relations: null,
     },
     getters: {
-        getSportIdBySportObjectId: state => id => {
-            let rel = state.relations.find(el => el.id_object === id);
-            return rel ? rel.id_sport : -1;
-        },
-        getSportsBySportObjectId: state => id => {
+        getRelationsBySportObjectId: state => id => {
             return state.relations.filter(el => el.id_object === id);
         },
     },

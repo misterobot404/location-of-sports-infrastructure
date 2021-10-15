@@ -6,6 +6,7 @@
             :key="item.name"
             :to="{name: item.name}"
             :title="item.meta && item.meta.title ? item.meta.title : ''"
+            exact
             >{{item.name}}
             </router-link>
         </div>

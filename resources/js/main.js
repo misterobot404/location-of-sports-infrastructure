@@ -3,6 +3,7 @@ import App from './App'
 import router from './routes'
 import store from './store'
 import components from './components'
+import vuetify from "./plugins/vuetify"
 
 components.forEach(e => {
     Vue.component(e.name, e)
@@ -11,10 +12,10 @@ components.forEach(e => {
 new Vue({
     store,
     router,
+    vuetify,
     render: h => h(App),
     beforeCreate() {
         store.dispatch('sports/getSports', null, {root: true}).then();
-        store.dispatch('relations/getRelations', null, {root: true}).then();
         store.dispatch('sport_objects/getSportObjects', null, {root: true}).then();
     }
 }).$mount('#app');

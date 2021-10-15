@@ -1,33 +1,88 @@
 <template>
-    <section style="display: flex; justify-content: center;">
+    <v-container fluid>
         <!-- Loader -->
-        <div v-if="!dataReady" class="loader" style="text-align: center">
+        <div v-if="!sport_objects" class="loader" style="text-align: center">
             <svg>
                 <circle cx="50" cy="50" r="40" stroke="red" stroke-dasharray="78.5 235.5" stroke-width="3" fill="none"/>
                 <circle cx="50" cy="50" r="30" stroke="blue" stroke-dasharray="62.8 188.8" stroke-width="3" fill="none"/>
                 <circle cx="50" cy="50" r="20" stroke="green" stroke-dasharray="47.1 141.3" stroke-width="3" fill="none"/>
             </svg>
-            <h2>Загрузка данных...</h2>
+            <h2 v-text="'Загрузка данных...'"/>
         </div>
-        <!-- Map -->
-        <div v-show="dataReady">
-            <input v-model="sport_object_id" placeholder="id объекта">
-            <router-link :to="{ name: 'Sport Objects', params: {id: sport_object_id}}" tag="button">Перейти</router-link>
-            <br/>
-            <label>Рисовать круги: <input type="checkbox" v-model="paintCircles"/></label>
-            <div class="map__container container" id='map'/>
-        </div>
-    </section>
+        <!-- Page -->
+        <v-row v-show="sport_objects">
+            <!-- Left -->
+            <v-col cols="4" class="pl-5">
+                <label>Рисовать круги: <input type="checkbox" v-model="paintCircles"/></label>
+                <v-select
+                    v-model="selected_types_of_sports"
+                    :items="sports ?
+                    sports.map(el => el.name)
+                    .filter(el => types_of_sports_filter ? (el.toLowerCase().indexOf(types_of_sports_filter.toLowerCase())) !== -1 : true)
+                    : []"
+                    :menu-props="{ maxHeight: '400', maxWidth:'300' }"
+                    outlined
+                    dense
+                    multiple
+                    hide-details
+                    clearable
+                    placeholder="Выберите вид спорта"
+                    class="mt-4"
+                >
+                    <template v-slot:prepend-item>
+                        <v-list-item>
+                            <v-text-field v-model.lazy.trim="types_of_sports_filter" prepend-icon="search" hide-details dense outlined placeholder="Поиск..."/>
+                        </v-list-item>
+                        <v-divider class="mt-2"></v-divider>
+                    </template>
+                    <template v-slot:selection="{ item, index }">
+                        <v-chip v-if="index < 2">
+                            <span>{{ item }}</span>
+                        </v-chip>
+                        <span
+                            v-if="index === 2"
+                            class="grey--text text-caption"
+                        >
+                          (+{{ selected_types_of_sports.length - 1 }} others)
+                        </span>
+                    </template>
+                </v-select>
+                <div class="d-flex mt-4">
+                    <v-text-field
+                        v-model="selected_sport_object_id"
+                        placeholder="id объекта"
+                        hide-details
+                        filled
+                        dense
+                    />
+                    <v-btn
+                        :to="{ name: 'Sport Objects', params: {id: selected_sport_object_id}}"
+                        color="primary"
+                        class="ml-2"
+                        style="text-transform: none">
+                        Перейти
+                    </v-btn>
+                </div>
+            </v-col>
+            <!-- Right -->
+            <v-col cols="8" class="pa-0">
+                <div id='map'/>
+            </v-col>
+        </v-row>
+    </v-container>
 </template>
 
 <script>
-import {mapState, mapGetters} from "vuex"
+import {mapState} from "vuex"
 
 export default {
     name: "Home",
     data() {
         return {
-            sport_object_id: null,
+            // filters
+            selected_sport_object_id: null,
+            selected_types_of_sports: [],
+            types_of_sports_filter: null,
             // map
             myMap: null,
             gridSize: 91,
@@ -38,17 +93,21 @@ export default {
     computed: {
         ...mapState({
             sport_objects: state => state.sport_objects.sport_objects,
-            sports: state => state.sports.sports,
-            relations: state => state.relations.relations,
+            sports: state => state.sports.sports
         }),
-        ...mapGetters({
-            getSportObjectById: "sport_objects/getSportObjectById",
-            getSportIdBySportObjectId: "relations/getSportIdBySportObjectId",
-            getSportById: "sports/getSportById",
-            sports_of_object: "relations/getSportsBySportObjectId"
-        }),
-        dataReady() {
-            return this.sport_objects && this.sports && this.relations;
+        filteredSportObjects() {
+            if (this.sport_objects) {
+                // Фильтр по видам спорта
+                if (this.selected_types_of_sports.length)
+                    return this.sport_objects.filter(sport_object => {
+                        let el_find = false;
+                        sport_object.params.forEach(param => {
+                            if (param && this.selected_types_of_sports.includes(param.sport)) el_find = true;
+                        });
+                        return el_find;
+                    })
+                else return this.sport_objects;
+            } else return false;
         }
     },
     methods: {
@@ -67,41 +126,24 @@ export default {
             this.myMap.geoObjects.removeAll();
             this.myMap.geoObjects.add(objectManager);
 
-            // Применяем к ObjectManager фильтр
-            let filterMonitor = new ymaps.Monitor(this.listBoxControl.state);
-            filterMonitor.add('filters', function (filters) {
-                objectManager.setFilter(getFilterFunction(filters));
-            });
-            function getFilterFunction(categories) {
-                return function (obj) {
-                    let content = obj.properties.balloonContentFooter;
-                    return categories[content]
-                }
-            }
-
             // Порционная отрисовка объектов
-            for (let i = 0, count_per_step = 200, pool = [...this.sport_objects]; i < 1000; i += count_per_step) {
+            for (let i = 0, count_per_step = 1000; i < this.filteredSportObjects.length; i += count_per_step) {
                 let data = [];
-                pool.slice(i, i + count_per_step).map(el => {
-                    let _sports = [];
-                    this.sports_of_object(el.id).forEach(e => {
-                        _sports.push(this.getSportById(e.id_sport)?.name);
-                    });
-
+                this.filteredSportObjects.slice(i, i + count_per_step).map(el => {
                     data.push({
                         type: "Feature",
-                        id: el.id,
+                        id: el.object_id,
                         geometry: {
-                            coordinates: el.coordinates.replace(/^\(|\)$/g, '').split(','),
+                            coordinates: el.object_coordinates.replace(/^\(|\)$/g, '').split(','),
                             type: this.paintCircles ? "Circle" : "Point",
                             radius: 1000,
                         },
                         properties: {
                             "balloonContent": "balloonContent",
-                            "balloonContentHeader": el.name,
+                            "balloonContentHeader": el.object_name,
                             "balloonContentBody": "<p>ЗДЕСЬ БУДУТ ПЕРЕЧИСЛЕНЫ СПОРТ ОБЪЕКТЫ, ВОЗМОЖНО, С ЧЕМТО ЕЩЁ</p>",
-                            "balloonContentFooter": [...new Set(_sports)].join('; '),
-                            "clusterCaption": el.name, //подпись и слева и справа
+                            "balloonContentFooter": "",
+                            "clusterCaption": el.object_name, //подпись и слева и справа
                             "hintContent": "<strong>Текст  <s>подсказки</s></strong>"
                         },
                         options: {
@@ -113,6 +155,14 @@ export default {
             }
         }
     },
+    watch: {
+        paintCircles() {
+            this.paintObjects();
+        },
+        filteredSportObjects(v) {
+            if (v) this.paintObjects();
+        }
+    },
     beforeMount() {
         // Создание карты
         ymaps.ready(['util.calculateArea']).then(() => {
@@ -120,62 +170,14 @@ export default {
                 center: [55.76, 37.64],
                 zoom: 10,
             });
-
-            // Добавляем список для выбора видов спорта
-            let listBoxItems = this.sports.map(sport => {
-                    return new ymaps.control.ListBoxItem({
-                        data: {content: sport.name},
-                        state: {selected: false}
-                    })
-                }),
-                reducer = function (filters, filter) {
-                    filters[filter.data.get('content')] = filter.isSelected();
-                    return filters;
-                },
-                listBoxControl = new ymaps.control.ListBox({
-                    data: {
-                        content: 'Фильтр по видам спорта',
-                        title: 'Фильтр'
-                    },
-                    items: listBoxItems,
-                    state: {
-                        // Признак, развернут ли список.
-                        expanded: false,
-                        filters: listBoxItems.reduce(reducer, {})
-                    }
-                });
-            this.listBoxControl = listBoxControl;
-            this.myMap.controls.add(listBoxControl);
-            listBoxControl.events.add(['select', 'deselect'], function (e) {
-                let listBoxItem = e.get('target');
-                let filters = ymaps.util.extend({}, listBoxControl.state.get('filters'));
-                filters[listBoxItem.data.get('content')] = listBoxItem.isSelected();
-                listBoxControl.state.set('filters', filters);
-            });
-        });
-
-        // Следим за изменением данных для отрисовки объектов
-        this.$watch(vm => [vm.sport_objects, vm.sports, vm.relations, vm.paintCircles], _ => {
-            if (this.dataReady) this.paintObjects()
         });
     }
 }
 </script>
 
 <style scoped>
-.filter__container {
-    display: flex;
-}
-
-.filter__container .filter {
-    padding: 5px;
-    width: 200px;
-}
-
-.map__container {
-    align-content: center;
-    height: 800px;
-    width: 800px;
+#map {
+    height: 100vh;
     border: 1px solid black;
 }
 
@@ -216,5 +218,4 @@ export default {
     width: 100px;
     height: 100px;
 }
-
 </style>

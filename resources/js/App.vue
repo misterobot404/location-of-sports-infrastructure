@@ -1,14 +1,17 @@
 <template>
-    <div style="min-height: 100%">
-        <!-- Header -->
-        <section>
-            <my-navbar></my-navbar>
-        </section>
-        <!-- Page -->
-        <keep-alive>
-            <router-view/>
-        </keep-alive>
-    </div>
+    <v-app>
+        <v-main>
+            <!--
+            <header>
+                <Navbar/>
+            </header>
+            -->
+            <!-- Page -->
+            <keep-alive>
+                <router-view/>
+            </keep-alive>
+        </v-main>
+    </v-app>
 </template>
 
 <script>
@@ -17,10 +20,11 @@ export default {
 }
 </script>
 
-<style scoped>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+<style>
+.v-application {
+    font-family: Nunito, sans-serif !important;
+}
+html {
+    overflow-y: auto !important;
 }
 </style>
