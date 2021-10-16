@@ -159,7 +159,7 @@ export default {
 
             // Порционная отрисовка объектов
 
-            for (var i = 0, count_per_step = 100, len = this.filteredSportObjects.length; i < len; i += count_per_step) {
+            for (var i = 0, count_per_step = this.doPaintCircles? 100 : 1000, len = this.filteredSportObjects.length; i < len; i += count_per_step) {
                 let data = []; let processed = 0;
                 this.filteredSportObjects.slice(i, i + count_per_step).map(el => {
                     processed ++;
@@ -338,9 +338,11 @@ export default {
     watch: {
         // Перерисовка объектов на карте
         filteredSportObjects(v) {
-            this.total = v.length;
-            if (v) this.paintObjects();
-            this.paintSportHeatmap();
+            if (v) {
+                this.total = v.length;
+                this.paintObjects();
+                this.paintSportHeatmap();
+            }
         },
         doPaintCircles() {
             this.paintObjects();
