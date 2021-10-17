@@ -115,19 +115,15 @@ export default {
             sport_objects: state => state.sport_objects.sport_objects,
             sports: state => state.sports.sports
         }),
+
         filteredSportObjects() {
-            if (this.sport_objects) {
-                // Фильтр по видам спорта
-                if (this.selected_types_of_sports.length)
-                    return this.sport_objects.filter(sport_object => {
-                        let el_find = false;
-                        sport_object.params.forEach(param => {
-                            if (param && this.selected_types_of_sports.includes(param.sport)) el_find = true;
-                        });
-                        return el_find;
-                    })
-                else return this.sport_objects;
-            } else return false;
+            return this.sport_objects??[].filter(sport_object => {
+                let el_find = false;
+                sport_object.params.forEach(param => {
+                    if (param && this.selected_types_of_sports.includes(param.sport)) el_find = true;
+                });
+                return el_find;
+            });
         },
 
         regionsManager() {
@@ -163,20 +159,29 @@ export default {
                 let data = []; let processed = 0;
                 this.filteredSportObjects.slice(i, i + count_per_step).map(el => {
                     processed ++;
-                    let _szones = [], _sports = [], _szonesHTML = '', _sportsHTML = '';
+                    let _szones = [], _sports = [], _squares = [], _szonesHTML = '', _sportsHTML = '';
 
                     el.params.map(_sz => {
                         if (_sz){
                             _szones.push(_sz.sportzone_type_name);
+                            _squares.push(_sz.sportzone_square);
                             _sports.push(_sz.sport);
                         }
                     });
 
+                    _szones = [...new Set(_szones)];
+                    _sports = [...new Set(_sports)];
+                    _squares = [...new Set(_squares)];
+
+                    //суммарная площадь входящих спортплощадок и цвет окружности
+                    // object_total_square in [0; 5kk]
+                    el.squareColor =  `rgba(${255*(10000 - el.object_total_square)/10000}, ${el.object_total_square > 10000 ? 255 : 255*(0 + el.object_total_square) / 10000}, 0, 1)`;
+
                     if (_szones.length > 0){
                         _szonesHTML += '<label>Состав:</label>';
                         _szonesHTML += '<ul>';
-                        [...new Set(_szones)].map(e => {
-                            _szonesHTML += `<li>${e}</li>`;
+                        _szones.map((e, i) => {
+                            _szonesHTML += `<li>${e} (${_squares[i]}кв.м.)</li>`;
                         });
                         _szonesHTML += '</ul>'
                     }
@@ -184,7 +189,7 @@ export default {
                     if (_sports.length > 0){
                         _sportsHTML += '<label>Виды спорта:</label>';
                         _sportsHTML += '<ul>';
-                        [...new Set(_sports)].map(e => {
+                        _sports.map(e => {
                             _sportsHTML += `<li>${e}</li>`;
                         });
                         _sportsHTML += '</ul>'
@@ -204,13 +209,17 @@ export default {
                                 '<p>Доступность: ' + el.accessibility_name + '</p>'
                                 + _szonesHTML
                                 + _sportsHTML
+                                + 'Общая площадь: ' + el.object_total_square + 'кв.м.'
                                 ,
                             "balloonContentFooter": 'Ведомство: ' + el.organisation_name,
                             "clusterCaption": el.object_name, //подпись и слева и справа
                             "hintContent": "<strong>Текст  <s>подсказки</s></strong>"
                         },
                         options: {
-                            "preset": "islands#blueCircleDotIconWithCaption"
+                            "preset": "islands#blueCircleDotIconWithCaption",
+                            fillColor: el.squareColor,
+                            opacity: 0.5,
+                            strokeColor: ['#000000', '#ffffff']
                         }
                     });
                 });
@@ -275,12 +284,24 @@ export default {
             if (this.doPaintPopHeatmap) {
                 let pool = population_heatmaps['RECORDS'];
                 ymaps.modules.require(['Heatmap'], Heatmap => {
-                    let heatmapdata = [];
+                    let heatmapdata = {
+                        type: 'FeatureCollection',
+                        features: []
+                    };
                     for (var i = 0; i < pool.length; i++) {
                         if (pool[i] && pool[i].coordinates && pool[i].count_persons) {
                             let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
-                            //for (var j = 1; j < pool[i].count_persons; j++)
-                            heatmapdata.push([parseFloat(coord[0]), parseFloat(coord[1])]);
+                            heatmapdata.features.push({
+                                id: pool[i].id,
+                                type: 'Feature',
+                                geometry: {
+                                    type: 'Point',
+                                    coordinates: [parseFloat(coord[0]), parseFloat(coord[1])]
+                                },
+                                properties: {
+                                    weight: pool[i].count_persons
+                                }
+                            });
                         }
                     }
                     this.popHeatmap = new Heatmap(heatmapdata, {
@@ -338,7 +359,7 @@ export default {
     watch: {
         // Перерисовка объектов на карте
         filteredSportObjects(v) {
-            if (v) {
+            if (v.length) {
                 this.total = v.length;
                 this.paintObjects();
                 this.paintSportHeatmap();
