@@ -108,6 +108,8 @@ export default {
             popHeatmap: null, //хитмап населения
 
             doPaintCircles: false,
+
+            objectsOverlay: null
         }
     },
     computed: {
@@ -117,13 +119,15 @@ export default {
         }),
 
         filteredSportObjects() {
-            return this.sport_objects??[].filter(sport_object => {
-                let el_find = false;
-                sport_object.params.forEach(param => {
-                    if (param && this.selected_types_of_sports.includes(param.sport)) el_find = true;
+           if (this.selected_types_of_sports.length)
+                return this.sport_objects.filter(sport_object => {
+                    let el_find = false;
+                    sport_object.params.forEach(param => {
+                        if (param && this.selected_types_of_sports.includes(param.sport)) el_find = true;
+                    });
+                    return el_find;
                 });
-                return el_find;
-            });
+            return this.sport_objects;
         },
 
         regionsManager() {
@@ -132,29 +136,36 @@ export default {
                 this.myMap.geoObjects.add(this.regionsOverlay);
             }
             return this.regionsOverlay;
-        }
+        },
+
+        objectsManager() {
+            if (this.objectsOverlay == null) {
+                this.objectsOverlay = new ymaps.ObjectManager({
+                    // Чтобы метки начали кластеризоваться, выставляем опцию.
+                    clusterize: !this.doPaintCircles,
+                    // ObjectManager принимает те же опции, что и кластеризатор.
+                    gridSize: this.gridSize,
+                    // Макет метки кластера pieChart.
+                    clusterIconLayout: "default#pieChart",
+                    // Отображение списка объектов при клике на кластер
+                    clusterDisableClickZoom: true
+                });
+
+            }
+            return this.objectsOverlay;
+        },
     },
     methods: {
+        reinitMainOverlay() {
+            this.myMap.geoObjects.remove(this.objectsManager);
+            this.objectsOverlay = null;
+            this.myMap.geoObjects.add(this.objectsManager);
+        },
         // Рисование объектов
         // Спортивные объекты (в виде точек или кругов доступности)
         paintObjects() {
             this.loaded = 0;
-            this.myMap.geoObjects.removeAll();
-            // Создаём объект ObjectManager для отображения, кластеризации и управления видимостью объектов
-            let objectManager = new ymaps.ObjectManager({
-                // Чтобы метки начали кластеризоваться, выставляем опцию.
-                clusterize: !this.doPaintCircles,
-                // ObjectManager принимает те же опции, что и кластеризатор.
-                gridSize: this.gridSize,
-                // Макет метки кластера pieChart.
-                clusterIconLayout: "default#pieChart",
-                // Отображение списка объектов при клике на кластер
-                clusterDisableClickZoom: true
-            });
-            this.myMap.geoObjects.add(objectManager);
-
             // Порционная отрисовка объектов
-
             for (var i = 0, count_per_step = this.doPaintCircles? 100 : 1000, len = this.filteredSportObjects.length; i < len; i += count_per_step) {
                 let data = []; let processed = 0;
                 this.filteredSportObjects.slice(i, i + count_per_step).map(el => {
@@ -225,7 +236,7 @@ export default {
                 });
                 setTimeout(() => {
                     this.loaded += processed;
-                    objectManager.add(data);
+                    this.objectsManager.add(data);
                 });
             }
         },
@@ -359,13 +370,13 @@ export default {
     watch: {
         // Перерисовка объектов на карте
         filteredSportObjects(v) {
-            if (v.length) {
-                this.total = v.length;
-                this.paintObjects();
-                this.paintSportHeatmap();
-            }
+            this.total = v.length ?? 0;
+            this.reinitMainOverlay(); //слой с объектами сбрасываем
+            this.paintObjects();
+            this.paintSportHeatmap(); //перерисовка хитмапа объектов
         },
         doPaintCircles() {
+            this.reinitMainOverlay(); //делаем новый оверлей
             this.paintObjects();
         },
         // Перерисовка оверлея и хитмапов
