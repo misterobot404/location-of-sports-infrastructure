@@ -68,6 +68,8 @@
                     <label>Хитмап объектов: <input type="checkbox" v-model="doPaintSpHeatmap"/></label><br/>
                     <label>Хитмап населения: <input type="checkbox" v-model="doPaintPopHeatmap"/></label><br/>
                     <label>Доступность: <input type="checkbox" v-model="doPaintCircles"/></label><br/>
+                    <label>Нормаль площади: <input type="number" v-model="squareNormal" @change="flushMainOverlay"/></label><br/>
+                    <label>Текущий район: {{currentRegion}}</label><br/>
                 </section>
                 <div ref='region_info' class="mt-4"/>
             </v-col>
@@ -107,9 +109,13 @@ export default {
             doPaintPopHeatmap: false, //выводить ли хитмап по населению
             popHeatmap: null, //хитмап населения
 
-            doPaintCircles: false,
+            doPaintCircles: false, //выводить ли круги доступности
 
-            objectsOverlay: null
+            objectsOverlay: null, //оверлей объектов (и кругов)
+
+            currentRegion: null, //выбранный регион
+
+            squareNormal: 1000 //нормаль площадей
         }
     },
     computed: {
@@ -150,12 +156,15 @@ export default {
                     // Отображение списка объектов при клике на кластер
                     clusterDisableClickZoom: true
                 });
-
             }
             return this.objectsOverlay;
         },
     },
     methods: {
+        flushMainOverlay(){
+            this.reinitMainOverlay();
+            this.paintObjects();
+        },
         reinitMainOverlay() {
             this.myMap.geoObjects.remove(this.objectsManager);
             this.objectsOverlay = null;
@@ -186,7 +195,7 @@ export default {
 
                     //суммарная площадь входящих спортплощадок и цвет окружности
                     // object_total_square in [0; 5kk]
-                    el.squareColor =  `rgba(${255*(10000 - el.object_total_square)/10000}, ${el.object_total_square > 10000 ? 255 : 255*(0 + el.object_total_square) / 10000}, 0, 1)`;
+                    el.squareColor =  `rgba(${255*(this.squareNormal - el.object_total_square)/this.squareNormal}, ${el.object_total_square > this.squareNormal ? 255 : 255*(0 + el.object_total_square) / this.squareNormal}, 0, 1)`;
 
                     if (_szones.length > 0){
                         _szonesHTML += '<label>Состав:</label>';
@@ -271,10 +280,11 @@ export default {
                                         + '<p>Площадь:</p>'
                                         + '<p>Плотность населения:</p>'
                                         + '<p>Количество спорт объектов:</p>',
+                                    "osm_id": feature.properties.OSM_ID,
                                 }
                             }, {
                                 fillColor: 'rgba(0, 0, 255, 0)',
-                                strokeColor: '#000000',//`rgb(${[1,2,3].map(x=>Math.random()*256|0)})`,
+                                strokeColor: '#000000',
                                 opacity: 0.5,
                                 strokeWidth: 2,
                             });
@@ -282,6 +292,7 @@ export default {
                                 e.preventDefault();
                                 let _me = e.get('target');
                                 this.$refs.region_info.innerHTML = _me.properties.get('infoHTML');
+                                this.currentRegion = _me.properties.get('osm_id');
                             });
                             this.regionsManager.add(myGeoObject);
                         });
@@ -371,13 +382,11 @@ export default {
         // Перерисовка объектов на карте
         filteredSportObjects(v) {
             this.total = v.length ?? 0;
-            this.reinitMainOverlay(); //слой с объектами сбрасываем
-            this.paintObjects();
+            this.flushMainOverlay(); //перерисовка слоя с объектами
             this.paintSportHeatmap(); //перерисовка хитмапа объектов
         },
         doPaintCircles() {
-            this.reinitMainOverlay(); //делаем новый оверлей
-            this.paintObjects();
+            this.flushMainOverlay();
         },
         // Перерисовка оверлея и хитмапов
         doPaintRegions() {
