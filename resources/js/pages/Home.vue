@@ -1,18 +1,18 @@
 <template>
-    <v-container fluid>
+    <v-container fluid pa-0>
         <!-- Loader -->
-        <div v-if="!sport_objects" class="loader" style="text-align: center">
+        <v-overlay v-if="!sport_objects" class="overlay" opacity="0">
             <svg>
                 <circle cx="50" cy="50" r="40" stroke="red" stroke-dasharray="78.5 235.5" stroke-width="3" fill="none"/>
                 <circle cx="50" cy="50" r="30" stroke="blue" stroke-dasharray="62.8 188.8" stroke-width="3" fill="none"/>
                 <circle cx="50" cy="50" r="20" stroke="green" stroke-dasharray="47.1 141.3" stroke-width="3" fill="none"/>
             </svg>
-            <h2 v-text="'Загрузка данных...'"/>
-        </div>
+            <h2>Загрузка данных...</h2>
+        </v-overlay>
         <!-- Page -->
-        <v-row v-show="sport_objects" >
-            <!-- Left -->
-            <v-col cols="4" class="pl-5">
+        <section style="height: 100vh; overflow: hidden;" class="d-flex flex-column-reverse flex-md-row">
+            <!-- Left/Bot Col -->
+            <div class="pa-4 col-6 col-md-4" style="overflow: auto; max-width: 100%">
                 <progress :value="loaded" :max="total" style="width: 100%"/>
                 <v-select
                     v-model="selected_types_of_sports"
@@ -59,12 +59,12 @@
                 </section>
                 <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4">
                 </div>
-            </v-col>
+            </div>
             <!-- Right -->
             <v-col cols="8" class="pa-0">
                 <div id='map'/>
             </v-col>
-        </v-row>
+        </section>
     </v-container>
 </template>
 
@@ -462,7 +462,7 @@ export default {
                                     + _szonesHTML
                                     + _sportsHTML
                                     + 'Общая площадь: ' + el.object_total_square + 'кв.м.'
-                                    ,
+                                ,
                                 "balloonContentFooter": 'Ведомство: ' + el.organisation_name,
                                 "clusterCaption": el.object_name, //подпись и слева и справа
                                 "hintContent": el.object_name
@@ -639,6 +639,9 @@ export default {
             this.myMap = new ymaps.Map('map', {
                 center: [55.76, 37.64],
                 zoom: 10,
+            }, {
+                // Автоматически растягивать карту по размерам контейнера
+                autoFitToViewport: 'always'
             });
         });
     },
@@ -647,34 +650,33 @@ export default {
 
 <style scoped>
 #map {
-    height: 100vh;
     border: 1px solid black;
+    max-width: 100%;
 }
 
 /* Loader */
-.loader {
-    position: fixed;
-    transform: translate(-50%, -50%);
-    top: 50%;
-    left: 50%;
+.overlay {
+    text-align: center;
+    background-color: #ffffff !important;
+    color: #05051f !important;
 }
 
-.loader circle {
+.overlay circle {
     transform-origin: center;
     transform-box: fill-box;
     transform-origin: center;
     animation: rotate linear infinite;
 }
 
-.loader circle:nth-child(1) {
+.overlay circle:nth-child(1) {
     animation-duration: 1.6s;
 }
 
-.loader circle:nth-child(2) {
+.overlay circle:nth-child(2) {
     animation-duration: 1.2s;
 }
 
-.loader circle:nth-child(3) {
+.overlay circle:nth-child(3) {
     animation-duration: 0.8s;
 }
 
@@ -684,7 +686,7 @@ export default {
     }
 }
 
-.loader svg {
+.overlay svg {
     width: 100px;
     height: 100px;
 }
