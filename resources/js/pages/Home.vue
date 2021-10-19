@@ -10,10 +10,7 @@
             <h2>Загрузка данных...</h2>
         </v-overlay>
         <!-- Page -->
-        <section
-            style="height: 100vh; overflow: hidden;"
-            class="d-flex flex-column-reverse flex-md-row"
-        >
+        <section style="height: 100vh; overflow: hidden;" class="d-flex flex-column-reverse flex-md-row">
             <!-- Left/Bot Col -->
             <div class="pa-4 col-6 col-md-4" style="overflow: auto; max-width: 100%">
                 <progress :value="loaded" :max="total" style="width: 100%"/>
