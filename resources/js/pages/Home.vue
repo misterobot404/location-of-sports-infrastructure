@@ -85,7 +85,7 @@ export default {
             sport_object_id: null,
             loaded: 0, total: 0,
 
-            doPaintRegions: false, //выводить ли регионы
+            doPaintRegions: true, //выводить ли регионы
             regionsOverlay: null, //оверлей регионов
 
             doPaintSpHeatmap: false, //выводить ли хитмап по объектам
@@ -501,10 +501,17 @@ export default {
         doPaintPopHeatmap() {
             this.paintPopulationHeatmap();
         },
+        // Применение стартовых оверлеев и хитмапов к карте после загрузки данных
+        sport_objects(v) {
+            if (v) {
+                if (this.doPaintRegions) this.paintRegions();
+                if (this.doPaintSpHeatmap) this.paintSportHeatmap();
+                if (this.doPaintPopHeatmap) this.paintPopulationHeatmap();
+            }
+        }
     },
     beforeMount() {
         // Создание карты
-        // TODO Сломался вывод регионов при старте
         ymaps.ready(['util.calculateArea']).then(() => {
             this.myMap = new ymaps.Map('map', {
                 center: [55.76, 37.64],
