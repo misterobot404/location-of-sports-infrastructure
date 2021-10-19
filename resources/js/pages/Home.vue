@@ -302,6 +302,7 @@ export default {
                     let _tomap = new ymaps.Polygon(inter.geometry.coordinates,
                     {
                         "hintContent": "Выбрать пересечение",
+                        balloonContent: "Пересечение"
                     },
                     {
                         "zIndex": 9000,
@@ -310,9 +311,9 @@ export default {
                         "strokeColor": '#000000'
                     });
                     _tomap.events.add('click', e => {
-                        e.preventDefault();
                         let _me = e.get('target');
                         this.countSportzonesInside(_me);
+                        _me.properties.set('balloonContent', _me.properties)
                     });
                     _tomap.events.add('mouseenter', e => {
                         let _me = e.get('target');
@@ -328,8 +329,33 @@ export default {
             }
         },
 
-        countSportzonesInside (region){
-
+        countSportzonesInside (geoobject){
+            let _count = 0, _totalSquare = 0, _sports = [], _customHTML = '';
+            this.filteredSportObjects.map(el => {
+                let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
+                //фильтруем по тем, которые входят в выбранный регион
+                if (geoobject.geometry.contains(coordinates))
+                {
+                    el.params.map(_sz => {
+                        if (_sz){
+                            let _szcoordinates = _sz.sportzone_coordinates.replace(/^\(|\)$/g, '').split(',');
+                            if (geoobject.geometry.contains(_szcoordinates)){
+                                _count ++;
+                                _totalSquare+= _sz.sportzone_square;
+                                _sports.push(_sz.sport);
+                            }
+                        }
+                    });
+                }
+            });
+            geoobject.properties.set('sportzones_inside', _count);
+            geoobject.properties.set('total_square', _totalSquare);
+            geoobject.properties.set('sports', [...new Set(_sports)].join('; '));
+            _customHTML = `<p>Количество спортзон: ${_count}</p>`
+                + `<p>Суммарная площадь спортзон: ${_totalSquare}</p>`
+                + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
+            ;
+            geoobject.properties.set('balloonContentBody', _customHTML);
         },
 
         paintEmptySpaces(){
@@ -409,6 +435,8 @@ export default {
             this.paintEmptySpaces();
             this.doShowIntersections = false;
             this.paintIntersections();
+            this.doPaintSportZones = false;
+            this.paintSportZones();
         },
         mapSetBounds(geoObject){
             this.mapScopeObject = new ymaps.GeoObjectCollection({}, {});
