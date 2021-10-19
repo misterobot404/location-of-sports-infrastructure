@@ -1,6 +1,6 @@
 <template>
     <v-container fluid pa-0>
-        <!-- Loader -->
+        <!-- Loading process  -->
         <v-overlay v-if="!sport_objects" class="overlay" opacity="0">
             <svg>
                 <circle cx="50" cy="50" r="40" stroke="red" stroke-dasharray="78.5 235.5" stroke-width="3" fill="none"/>
@@ -12,57 +12,83 @@
         <!-- Page -->
         <section style="height: 100vh; overflow: hidden;" class="d-flex flex-column-reverse flex-md-row">
             <!-- Left/Bot Col -->
-            <div class="pa-4 col-6 col-md-4" style="overflow: auto; max-width: 100%">
-                <progress :value="loaded" :max="total" style="width: 100%"/>
-                <v-select
-                    v-model="selected_types_of_sports"
-                    :items="sports ?
+            <v-col cols="6" md="5" class="d-flex" style="overflow: auto; max-width: 100%">
+                <!-- Регионы -->
+                <!--<v-col cols="4" class="pa-0">
+                    <v-text-field
+                        v-model="search_region"
+                        hide-details
+                        placeholder="Поиск района..."
+                        append-icon="search"
+                        outlined
+                        dense
+                    />
+                </v-col>
+                <v-col class="text-center pa-0">
+                    <v-divider vertical/>
+                </v-col>-->
+                <!-- Фильтры и спортивные события -->
+                <v-col cols="7" class="pa-0">
+                    <!--<v-text-field
+                        v-model="search_region"
+                        hide-details
+                        placeholder="Поиск спортивного объекта..."
+                        append-icon="search"
+                        outlined
+                        dense
+                    />-->
+                    <v-select
+                        v-model="selected_types_of_sports"
+                        :items="sports ?
                     sports.map(el => el.name)
                     .filter(el => types_of_sports_filter ? (el.toLowerCase().indexOf(types_of_sports_filter.toLowerCase())) !== -1 : true)
                     : []"
-                    :menu-props="{ maxHeight: '400', maxWidth:'300' }"
-                    outlined
-                    dense
-                    multiple
-                    hide-details
-                    clearable
-                    placeholder="Выберите вид спорта"
-                    class="mt-4"
-                >
-                    <template v-slot:prepend-item>
-                        <v-list-item>
-                            <v-text-field v-model.lazy.trim="types_of_sports_filter" prepend-icon="search" hide-details dense outlined placeholder="Поиск..."/>
-                        </v-list-item>
-                        <v-divider class="mt-2"></v-divider>
-                    </template>
-                    <template v-slot:selection="{ item, index }">
-                        <v-chip v-if="index < 2">
-                            <span>{{ item }}</span>
-                        </v-chip>
-                        <span
-                            v-if="index === 2"
-                            class="grey--text text-caption"
-                        >
+                        :menu-props="{ maxHeight: '400', maxWidth:'300' }"
+                        outlined
+                        dense
+                        multiple
+                        hide-details
+                        clearable
+                        placeholder="Выберите вид спорта"
+                        class="mt-4"
+                    >
+                        <template v-slot:prepend-item>
+                            <v-list-item>
+                                <v-text-field v-model.lazy.trim="types_of_sports_filter" prepend-icon="search" hide-details dense outlined placeholder="Поиск..."/>
+                            </v-list-item>
+                            <v-divider class="mt-2"></v-divider>
+                        </template>
+                        <template v-slot:selection="{ item, index }">
+                            <v-chip v-if="index < 2">
+                                <span>{{ item }}</span>
+                            </v-chip>
+                            <span
+                                v-if="index === 2"
+                                class="grey--text text-caption"
+                            >
                           (+{{ selected_types_of_sports.length - 1 }} others)
                         </span>
-                    </template>
-                </v-select>
-                <section class="mt-4">
-                    <label>Регионы: <input type="checkbox" v-model="doPaintRegions"/></label><br/>
-                    <label>Спортплощадки: <input type="checkbox" v-model="doPaintSportZones" @change="paintSportZones"/></label><br/>
-                    <label>Хитмап объектов: <input type="checkbox" v-model="doPaintSpHeatmap"/></label><br/>
-                    <label>Хитмап населения: <input type="checkbox" v-model="doPaintPopHeatmap"/></label><br/>
-                    <label>Доступность: <input type="checkbox" v-model="doPaintCircles"/></label><br/>
-                    <label>Пустоты: <input type="checkbox" v-model="doShowEmptySpaces" @change="paintEmptySpaces"/></label><br/>
-                    <label>Пересечения: <input type="checkbox" v-model="doShowIntersections" @change="paintIntersections"/></label> {{intersectionsPool.length}}<br/>
-                    <label>Нормаль площади: <input type="number" v-model="squareNormal" @change="flushMainOverlay"/></label><br/>
-                </section>
-                <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4">
-                </div>
-            </div>
-            <!-- Right -->
-            <v-col cols="8" class="pa-0">
+                        </template>
+                    </v-select>
+                    <section class="mt-4">
+                        <label>Регионы: <input type="checkbox" v-model="doPaintRegions"/></label><br/>
+                        <label>Спортплощадки: <input type="checkbox" v-model="doPaintSportZones" @change="paintSportZones"/></label><br/>
+                        <label>Хитмап объектов: <input type="checkbox" v-model="doPaintSpHeatmap"/></label><br/>
+                        <label>Хитмап населения: <input type="checkbox" v-model="doPaintPopHeatmap"/></label><br/>
+                        <label>Доступность: <input type="checkbox" v-model="doPaintCircles"/></label><br/>
+                        <label>Пустоты: <input type="checkbox" v-model="doShowEmptySpaces" @change="paintEmptySpaces"/></label><br/>
+                        <label>Пересечения: <input type="checkbox" v-model="doShowIntersections" @change="paintIntersections"/></label> {{intersectionsPool.length}}<br/>
+                        <label>Нормаль площади: <input type="number" v-model="squareNormal" @change="flushMainOverlay"/></label><br/>
+                    </section>
+                    <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4">
+                    </div>
+                </v-col>
+            </v-col>
+            <!-- Right/Top Col -->
+            <v-col cols="6" md="7" class="pa-0" style="max-width: 100%;">
                 <div id='map'/>
+<!--                &lt;!&ndash; Rendering process  &ndash;&gt;
+                <progress v-if="loaded > 0 && loaded < total" :value="loaded" :max="total" style="width: 108px; position: relative; top: 38px; left: 10px; z-index: 400;"/>-->
             </v-col>
         </section>
     </v-container>
@@ -651,7 +677,7 @@ export default {
 <style scoped>
 #map {
     border: 1px solid black;
-    max-width: 100%;
+    height: 100%;
 }
 
 /* Loader */
