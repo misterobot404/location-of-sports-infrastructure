@@ -12,7 +12,7 @@ class OrganisationController extends Controller
     public function index(): JsonResponse
     {
         return response()->json([
-            "accessibility" => Organisation::all()
+            "orgasiations" => Organisation::all()
         ], 200);
     }
 }
