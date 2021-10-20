@@ -359,14 +359,28 @@ export default {
                     });
                 }
             });
+
+            let _sportzones_by_types = _sztypes.reduce((obj, item) => {
+                obj[item] = (obj[item] || 0) + 1;
+                return obj;
+            }, {});
+            let _sportzones_by_sports = _sports.reduce((obj, item) => {
+                obj[item] = (obj[item] || 0) + 1;
+                return obj;
+            }, {});
+
+            geoobject.properties.set('sportzones_by_sports', _sportzones_by_sports);
+            geoobject.properties.set('sportzones_by_types', _sportzones_by_types);
             geoobject.properties.set('sportzones_inside', _count);
             geoobject.properties.set('total_square', _totalSquare);
             geoobject.properties.set('sports', [...new Set(_sports)].join('; '));
             geoobject.properties.set('sportzone_types', [...new Set(_sztypes)].join('; '));
             _customHTML = `<p>Количество спортзон: ${_count}</p>`
-                + `<p>Суммарная площадь спортзон: ${_totalSquare}</p>`
+                + `<p>Суммарная площадь спортзон: ${_totalSquare??0}</p>`
                 + `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`
                 + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
+                + `<p>По типам: ${JSON.stringify(_sportzones_by_types)}</p>`
+                + `<p>По спорту: ${JSON.stringify(_sportzones_by_sports)}</p>`
             ;
             //TODO Сверстать красиво
             _customFooter = `<div><label>Название <br/><input type="text" class="input intersection_name" placeholder="Введите название области" /></label>`
@@ -503,7 +517,7 @@ export default {
                             _szonesHTML += '<label>Состав:</label>';
                             _szonesHTML += '<ul>';
                             _szones.map((e, i) => {
-                                _szonesHTML += `<li>${e} (${_squares[i]}кв.м.)</li>`;
+                                _szonesHTML += `<li>${e} (${_squares[i]??0} кв.м.)</li>`;
                             });
                             _szonesHTML += '</ul>'
                         }
