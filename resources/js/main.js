@@ -17,6 +17,7 @@ new Vue({
     beforeCreate() {
         store.dispatch('sports/getSports', null, {root: true}).then();
         store.dispatch('sport_objects/getSportObjects', null, {root: true}).then();
+        store.dispatch('intersections/getAll', null, {root: true}).then();
     }
 }).$mount('#app');
 

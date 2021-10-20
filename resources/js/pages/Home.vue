@@ -78,9 +78,20 @@
                         <label>Доступность: <input type="checkbox" v-model="doPaintCircles"/></label><br/>
                         <label>Пустоты: <input type="checkbox" v-model="doShowEmptySpaces" @change="paintEmptySpaces"/></label><br/>
                         <label>Пересечения: <input type="checkbox" v-model="doShowIntersections" @change="paintIntersections"/></label> {{intersectionsPool.length}}<br/>
+                        <label v-show="savedIntersections.length">Сохраненные пересечения: <input type="checkbox" v-model="doShowSavedIntersections" @change="paintSavedIntersections"/></label><br/>
                         <label>Нормаль площади: <input type="number" v-model="squareNormal" @change="flushMainOverlay"/></label><br/>
                     </section>
                     <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4">
+                    </div>
+                    <div v-show="choosedIntersections.length > 0" class="mt-4">
+                        <h2>Выбранные пересечения</h2>
+                        <div v-for="intersect in choosedIntersections" v-bind:key="intersect.properties.get('id')">
+                            <hr/>
+                            <div v-html="intersect.properties.get('customHTML')"></div>
+                            <button @click="removeIntersection(intersect)">Удалить</button>
+                        </div>
+                        <hr/>
+                        <button @click="clearChoosedIntersections">Очистить</button><button @click="saveIntersections">Сохранить</button>
                     </div>
                 </v-col>
             </v-col>
@@ -95,7 +106,8 @@
 </template>
 
 <script>
-import {mapState} from "vuex"
+import axios from "axios"
+import {mapActions, mapState} from "vuex"
 import regions_geo from '../regions_geo.json'
 import population_heatmaps from '../population_heatmaps.json'
 
@@ -138,7 +150,11 @@ export default {
 
             doShowIntersections: false, //выводить ли области с пересечениями
             intersectOverlay: null,
-            intersectionsPool: [],
+            intersectionsPool: [], //общий пул пересечений
+
+            choosedIntersections: [], //выбранные пользователем пересечения
+            doShowSavedIntersections: false, //выводить ли сохраненные пересечения
+            savedIntersOverlay: null, //оверлей сохраненных пересечений
 
             doPaintSportZones: false, //выводить ли спортплощадки объектов
             sportZonesOverlay: null,
@@ -147,7 +163,8 @@ export default {
     computed: {
         ...mapState({
             sport_objects: state => state.sport_objects.sport_objects,
-            sports: state => state.sports.sports
+            sports: state => state.sports.sports,
+            savedIntersections: state => state.intersections.intersections //сохраненные пересечения
         }),
 
         filteredSportObjects() {
@@ -194,7 +211,6 @@ export default {
                     clusterDisableClickZoom: true
                 });
                 this.myMap.geoObjects.add(this.objectsOverlay);
-                this.objectsOverlay.objects.events.add(['click'], this.clickOnObject);
                 this.objectsOverlay.objects.events.add(['mouseenter', 'mouseleave'], this.mouseOverObject);
             }
             return this.objectsOverlay;
@@ -226,18 +242,66 @@ export default {
                     `<p>Количество спорт объектов: ${this.currentRegionGeometry.properties.get('sport_objects_inside')}</p>`
                 ;
             return '';
-        }
+        },
+
+        savedIntersManager() {
+            if (this.savedIntersOverlay == null) {
+                this.savedIntersOverlay = new ymaps.GeoObjectCollection({}, {});
+                this.myMap.geoObjects.add(this.savedIntersOverlay);
+            }
+            return this.savedIntersOverlay;
+        },
     },
     methods: {
-        saveIntersection (intrsct){
-            console.log(intrsct, 'saved');
-            //собираемая информация: типы спортзон, суммарная площадь, количество зон внутри, виды спорта
-            let _sz_count = 0, _sz_types = '', _sz_square = 0, _sz_sports = '';
-            _sz_count = intrsct.properties.get('sportzones_inside');
-            _sz_types = intrsct.properties.get('sportzone_types');
-            _sz_square = intrsct.properties.get('total_square');
-            _sz_sports = intrsct.properties.get('sports');
-            //TODO axios на сохранение пересечения и запоминание зон в data (или state)
+        ...mapActions({
+            storeInteraction: 'intersections/saveObject',
+            deleteInteraction: 'intersections/deleteObject',
+        }),
+        paintSavedIntersections () {
+            this.savedIntersManager.removeAll();
+            if (this.doShowSavedIntersections)
+                this.paintIntersectionsOnOverlay(this.savedIntersections, this.savedIntersManager);
+        },
+        removeIntersection(intersect) {
+            let _id = intersect.properties.get('id');
+            this.choosedIntersections.splice(this.choosedIntersections.indexOf(intersect), 1);
+            intersect.properties.set('is_choosed', false);
+            intersect.options.set('fillColor', '#3ac255');
+            if (typeof(_id) == 'number'){ //объект из базы
+                this.deleteInteraction(_id);
+                this.savedIntersManager.remove(intersect);
+            }
+        },
+        clearChoosedIntersections (){
+            this.choosedIntersections.map(intersect => {
+                this.removeIntersection(intersect);
+            })
+            this.choosedIntersections = [];
+        },
+        saveIntersections (){
+            this.choosedIntersections.map(intrsct => {
+                //собираемая информация: типы спортзон, суммарная площадь, количество зон внутри, виды спорта
+                let _sz_count = 0, _sz_types = '', _sz_square = 0, _sz_sports = '', _sz_by_sport = {}, _sz_by_type = {}, _population = 0, _coords = null;
+                _sz_count = intrsct.properties.get('sportzones_inside');
+                _sz_types = intrsct.properties.get('sportzone_types');
+                _sz_square = intrsct.properties.get('total_square');
+                _sz_sports = intrsct.properties.get('sports');
+                _sz_by_sport = intrsct.properties.get('sportzones_by_sports');
+                _sz_by_type = intrsct.properties.get('sportzones_by_types');
+                _population = intrsct.properties.get('population');
+                _coords = intrsct.geometry.getCoordinates();
+                let _params = {
+                    polygon_json: JSON.stringify(_coords),
+                    polygon: _coords,
+                    area: _sz_square,
+                    type_sportzones: JSON.stringify(_sz_by_type),
+                    type_sports: JSON.stringify(_sz_by_sport),
+                    sportzones_count: _sz_count,
+                    population: _population
+                };
+                //запрос на сохранение пересечения
+                this.storeInteraction(_params);
+            });
         },
         paintSportZones(){
             this.sportZonesManager.removeAll();
@@ -292,6 +356,60 @@ export default {
             return _merkator;
         },
 
+        paintIntersectionsOnOverlay (intersectionsPool, manager){
+            intersectionsPool.map(inter => {
+                //поскольку здесь могут быть объекты, созданные по-разному, необходимо использовать такое получение координат
+                let _coords = inter.geometry ? inter.geometry.coordinates : JSON.parse(inter.polygon_json);
+                let _tomap = new ymaps.Polygon(_coords,
+                {
+                    hintContent: "Выбрать пересечение",
+                    balloonContent: "Пересечение",
+                    source: inter.geometry ? 'map' : 'db',
+                    population: inter.population,
+                    sportzones_inside: inter.sportzones_count,
+                    total_square: inter.area,
+                    sportzones_by_sports: inter.type_sports,
+                    sportzones_by_types: inter.type_sportzones,
+                    sports: '',
+                    sportzone_types: '',
+                    id: inter.geometry ? 'intersection_' + Date.now() : inter.id,
+                },
+                {
+                    zIndex: 9000,
+                    opacity: 0.5,
+                    fillColor: '#3ac255',
+                    strokeColor: '#000000',
+                });
+                _tomap.events.add('click', e => {
+                    e.preventDefault();
+                    let _me = e.get('target');
+                    //если уже выбрано - убираем из пула
+                    if(_me.properties.get('is_choosed')){
+                        this.choosedIntersections.splice(this.choosedIntersections.indexOf(_me), 1);
+                        _me.properties.set('is_choosed', false);
+                        _me.options.set('fillColor', '#3ac255');
+                    }
+                    else{
+                        this.countSportzonesInside(_me);
+                        this.choosedIntersections.push(_me);
+                        _me.properties.set('is_choosed', true);
+                        _me.options.set('fillColor', '#33BBFF');
+                    }
+                });
+                _tomap.events.add('mouseenter', e => {
+                    let _me = e.get('target');
+                    _me.options.set('strokeWidth', '8');
+                });
+                _tomap.events.add('mouseleave', e => {
+                    let _me = e.get('target');
+                    _me.options.set('strokeWidth', '2');
+                });
+
+                manager.add(_tomap);
+            });
+        },
+
+        //ВЫВОД ПЕРЕСЕЧЕНИЙ
         paintIntersections(){
             this.intersectionsPool = [];
             this.intersectionsManager.removeAll();
@@ -308,85 +426,74 @@ export default {
                             this.intersectionsPool.push(_intersection);
                     }
                 }
-                this.intersectionsPool.map(inter => {
-                    let _tomap = new ymaps.Polygon(inter.geometry.coordinates,
-                    {
-                        "hintContent": "Выбрать пересечение",
-                        balloonContent: "Пересечение"
-                    },
-                    {
-                        "zIndex": 9000,
-                        opacity: 0.5,
-                        fillColor: '#3ac255',
-                        "strokeColor": '#000000'
-                    });
-                    _tomap.events.add('click', e => {
-                        let _me = e.get('target');
-                        this.countSportzonesInside(_me);
-                        _me.properties.set('balloonContent', _me.properties);
-                    });
-                    _tomap.events.add('mouseenter', e => {
-                        let _me = e.get('target');
-                        _me.options.set('strokeWidth', '8');
-                    });
-                    _tomap.events.add('mouseleave', e => {
-                        let _me = e.get('target');
-                        _me.options.set('strokeWidth', '2');
-                    });
-
-                    this.intersectionsManager.add(_tomap);
-                });
+                this.paintIntersectionsOnOverlay(this.intersectionsPool, this.intersectionsManager);
             }
         },
 
+        //ПОДСЧЕТ МЕТРИКИ ПЕРЕСЕЧЕНИЯ
         countSportzonesInside (geoobject){
-            let _count = 0, _totalSquare = 0, _sports = [], _sztypes = [], _customHTML = '', _customFooter = '';
-            this.filteredSportObjects.map(el => {
-                let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
-                //фильтруем по тем, которые входят в выбранный регион
-                if (geoobject.geometry.contains(coordinates))
-                {
-                    el.params.map(_sz => {
-                        if (_sz){
-                            let _szcoordinates = _sz.sportzone_coordinates.replace(/^\(|\)$/g, '').split(',');
-                            if (geoobject.geometry.contains(_szcoordinates)){
-                                _count ++;
-                                _totalSquare += _sz.sportzone_square;
-                                _sports.push(_sz.sport);
-                                _sztypes.push(_sz.sportzone_type_name);
+            let _count = 0, _totalSquare = 0, _sports = [], _sztypes = [], _customHTML = '', _population = 0, _sportzones_by_types = {}, _sportzones_by_sports = {};
+            //здесь рисуются объекты с базы и с карты, объекты в базе уже просчитаны
+            if (geoobject.properties.get('source') != 'db'){
+                console.log('its geom');
+                //считаем, сколько объектов входит в пересечение
+                this.filteredSportObjects.map(el => {
+                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
+                    //фильтруем по тем, которые входят в выбранный регион
+                    if (geoobject.geometry.contains(coordinates))
+                        el.params.map(_sz => {
+                            if (_sz){
+                                let _szcoordinates = _sz.sportzone_coordinates.replace(/^\(|\)$/g, '').split(',');
+                                if (geoobject.geometry.contains(_szcoordinates)){
+                                    _count ++;
+                                    _totalSquare += _sz.sportzone_square;
+                                    _sports.push(_sz.sport);
+                                    _sztypes.push(_sz.sportzone_type_name);
+                                }
                             }
+                        });
+                });
+
+                _sportzones_by_types = _sztypes.reduce((obj, item) => {
+                    obj[item] = (obj[item] || 0) + 1;
+                    return obj;
+                }, {});
+                _sportzones_by_sports = _sports.reduce((obj, item) => {
+                    obj[item] = (obj[item] || 0) + 1;
+                    return obj;
+                }, {});
+                //считаем население, входящее в пересечение
+                let pool = population_heatmaps['RECORDS'];
+                for (var i = 0; i < pool.length; i++) {
+                    if (pool[i] && pool[i].coordinates && pool[i].count_persons) {
+                        let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
+                        if (geoobject.geometry.contains(coord)){
+                            _population += Math.floor(pool[i].count_persons);
                         }
-                    });
+                    }
                 }
-            });
+            }
+            else{ //Объекты из базы данных
+                _count = geoobject.properties.get('sportzones_inside');
+                _totalSquare = geoobject.properties.get('total_square');
+                _sportzones_by_types = JSON.parse(geoobject.properties.get('sportzones_by_types'));
+                _sportzones_by_sports = JSON.parse(geoobject.properties.get('sportzones_by_sports'));
+                _population = geoobject.properties.get('population');
+                _sztypes = Object.keys(_sportzones_by_types);
+                _sports = Object.keys(_sportzones_by_sports);
 
-            let _sportzones_by_types = _sztypes.reduce((obj, item) => {
-                obj[item] = (obj[item] || 0) + 1;
-                return obj;
-            }, {});
-            let _sportzones_by_sports = _sports.reduce((obj, item) => {
-                obj[item] = (obj[item] || 0) + 1;
-                return obj;
-            }, {});
-
-            geoobject.properties.set('sportzones_by_sports', _sportzones_by_sports);
-            geoobject.properties.set('sportzones_by_types', _sportzones_by_types);
-            geoobject.properties.set('sportzones_inside', _count);
-            geoobject.properties.set('total_square', _totalSquare);
-            geoobject.properties.set('sports', [...new Set(_sports)].join('; '));
-            geoobject.properties.set('sportzone_types', [...new Set(_sztypes)].join('; '));
+                geoobject.properties.set('sports', [...new Set(_sports)].join('; '));
+                geoobject.properties.set('sportzone_types', [...new Set(_sztypes)].join('; '));
+            }
             _customHTML = `<p>Количество спортзон: ${_count}</p>`
-                + `<p>Суммарная площадь спортзон: ${_totalSquare??0}</p>`
+                + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare??0)}</p>`
                 + `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`
                 + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
                 + `<p>По типам: ${JSON.stringify(_sportzones_by_types)}</p>`
                 + `<p>По спорту: ${JSON.stringify(_sportzones_by_sports)}</p>`
+                + `<p>Численность населения: ${Math.floor(_population)} чел.</p>`
             ;
-            //TODO Сверстать красиво
-            _customFooter = `<div><label>Название <br/><input type="text" class="input intersection_name" placeholder="Введите название области" /></label>`
-                + `<br/><button class="btn save_itersection" onclick="">Сохранить</button></div>`;
-            geoobject.properties.set('balloonContentBody', _customHTML);
-            geoobject.properties.set('balloonContentFooter', _customFooter);
+            geoobject.properties.set('customHTML', _customHTML);
         },
 
         paintEmptySpaces(){
@@ -434,16 +541,7 @@ export default {
                     });
                 }
         },
-        //клик на объекте
-        clickOnObject(e){
-            var objectId = e.get('objectId'),
-                objectGeometry = this.objectsManager.objects.getById(objectId).geometry.type;
-            /* это пример изменения по id объекта
-            this.objectManager.objects.setObjectOptions(objectId, {
-                preset: 'islands#yellowIcon'
-            });
-            */
-        },
+
         filterBySports(objects){
             return objects.filter(sport_object => {
                 let el_find = false;
@@ -607,7 +705,7 @@ export default {
                 });
             }
         },
-        // Хитмап населения
+        // ВЫВОДИТ ХИТМАП НАСЕЛЕНИЯ
         paintPopulationHeatmap() {
             if (this.popHeatmap) this.popHeatmap.destroy();
             if (this.doPaintPopHeatmap) {
@@ -726,14 +824,6 @@ export default {
             }, {
                 // Автоматически растягивать карту по размерам контейнера
                 autoFitToViewport: 'always'
-            });
-            this.myMap.events.add('balloonopen', e => {
-                let _me = e.get('target');
-                //обработчик кнопки "сохранить"
-                let _btnsave = document.getElementsByClassName('save_itersection')[0];
-                if (_btnsave) _btnsave.addEventListener('click', event => {
-                    this.saveIntersection(_me);
-                });
             });
         });
     },
