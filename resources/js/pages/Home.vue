@@ -229,6 +229,16 @@ export default {
         }
     },
     methods: {
+        saveIntersection (intrsct){
+            console.log(intrsct, 'saved');
+            //собираемая информация: типы спортзон, суммарная площадь, количество зон внутри, виды спорта
+            let _sz_count = 0, _sz_types = '', _sz_square = 0, _sz_sports = '';
+            _sz_count = intrsct.properties.get('sportzones_inside');
+            _sz_types = intrsct.properties.get('sportzone_types');
+            _sz_square = intrsct.properties.get('total_square');
+            _sz_sports = intrsct.properties.get('sports');
+            //TODO axios на сохранение пересечения и запоминание зон в data (или state)
+        },
         paintSportZones(){
             this.sportZonesManager.removeAll();
             if (this.doPaintSportZones && this.currentRegion > 0){
@@ -313,7 +323,7 @@ export default {
                     _tomap.events.add('click', e => {
                         let _me = e.get('target');
                         this.countSportzonesInside(_me);
-                        _me.properties.set('balloonContent', _me.properties)
+                        _me.properties.set('balloonContent', _me.properties);
                     });
                     _tomap.events.add('mouseenter', e => {
                         let _me = e.get('target');
@@ -330,7 +340,7 @@ export default {
         },
 
         countSportzonesInside (geoobject){
-            let _count = 0, _totalSquare = 0, _sports = [], _customHTML = '';
+            let _count = 0, _totalSquare = 0, _sports = [], _sztypes = [], _customHTML = '', _customFooter = '';
             this.filteredSportObjects.map(el => {
                 let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
                 //фильтруем по тем, которые входят в выбранный регион
@@ -341,8 +351,9 @@ export default {
                             let _szcoordinates = _sz.sportzone_coordinates.replace(/^\(|\)$/g, '').split(',');
                             if (geoobject.geometry.contains(_szcoordinates)){
                                 _count ++;
-                                _totalSquare+= _sz.sportzone_square;
+                                _totalSquare += _sz.sportzone_square;
                                 _sports.push(_sz.sport);
+                                _sztypes.push(_sz.sportzone_type_name);
                             }
                         }
                     });
@@ -351,11 +362,17 @@ export default {
             geoobject.properties.set('sportzones_inside', _count);
             geoobject.properties.set('total_square', _totalSquare);
             geoobject.properties.set('sports', [...new Set(_sports)].join('; '));
+            geoobject.properties.set('sportzone_types', [...new Set(_sztypes)].join('; '));
             _customHTML = `<p>Количество спортзон: ${_count}</p>`
                 + `<p>Суммарная площадь спортзон: ${_totalSquare}</p>`
+                + `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`
                 + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
             ;
+            //TODO Сверстать красиво
+            _customFooter = `<div><label>Название <br/><input type="text" class="input intersection_name" placeholder="Введите название области" /></label>`
+                + `<br/><button class="btn save_itersection" onclick="">Сохранить</button></div>`;
             geoobject.properties.set('balloonContentBody', _customHTML);
+            geoobject.properties.set('balloonContentFooter', _customFooter);
         },
 
         paintEmptySpaces(){
@@ -435,7 +452,6 @@ export default {
             this.paintEmptySpaces();
             this.doShowIntersections = false;
             this.paintIntersections();
-            this.doPaintSportZones = false;
             this.paintSportZones();
         },
         mapSetBounds(geoObject){
@@ -696,6 +712,14 @@ export default {
             }, {
                 // Автоматически растягивать карту по размерам контейнера
                 autoFitToViewport: 'always'
+            });
+            this.myMap.events.add('balloonopen', e => {
+                let _me = e.get('target');
+                //обработчик кнопки "сохранить"
+                let _btnsave = document.getElementsByClassName('save_itersection')[0];
+                if (_btnsave) _btnsave.addEventListener('click', event => {
+                    this.saveIntersection(_me);
+                });
             });
         });
     },
