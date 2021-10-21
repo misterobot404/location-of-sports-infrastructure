@@ -177,6 +177,17 @@ export default {
             if (this.regionsOverlay == null) {
                 this.regionsOverlay = new ymaps.GeoObjectCollection({}, {});
                 this.myMap.geoObjects.add(this.regionsOverlay);
+                this.regionsOverlay.events.add('click', e => {
+                    let _me = e.get('target');
+                    this.mapSetCurrentRegion(_me);
+                });
+                this.regionsOverlay.events.add('mouseenter', e => {
+                    let _me = e.get('target');
+                    _me.options.set('strokeWidth', 5);
+                });
+                this.regionsOverlay.events.add('mouseleave', e => {
+                    this.darkAllRegions();
+                });
             }
             return this.regionsOverlay;
         },
@@ -256,6 +267,30 @@ export default {
             storeInteraction: 'intersections/saveObject',
             deleteInteraction: 'intersections/deleteObject',
         }),
+
+        chooseRegionById (osm_id){
+            this.regionsManager.each(rg => {
+                if (rg.properties.get('osm_id') == osm_id)
+                    rg.events.fire('click');
+            });
+        },
+
+        //подсвечивает район по osm_id
+        enlightRegionById(osm_id){
+            this.regionsManager.each(rg => {
+                if (rg.properties.get('osm_id') == osm_id)
+                    rg.options.set('strokeWidth', '5');
+            });
+        },
+
+        //убирает подсветку со всех районов
+        darkAllRegions (){
+            this.regionsManager.each(rg => {
+                if (rg.properties.get('osm_id') != this.currentRegion)
+                    rg.options.set('strokeWidth', '2');
+            });
+        },
+
         paintSavedIntersections () {
             this.savedIntersManager.removeAll();
             if (this.doShowSavedIntersections)
@@ -564,9 +599,7 @@ export default {
         mapSetCurrentRegion(region){
             if (region.properties.get('osm_id') == this.currentRegion)
                 return;
-            this.regionsManager.each(rg => {
-                rg.options.set('strokeWidth', '2');
-            });
+            this.darkAllRegions();
             this.currentRegion = region.properties.get('osm_id');
             this.currentRegionGeometry = region;
             region.options.set('strokeWidth', '5');
@@ -703,11 +736,6 @@ export default {
                                 fillColor: 'rgba(0, 0, 255, 0)',
                                 strokeColor: '#3390FF',
                                 strokeWidth: feature.properties.OSM_ID == this.currentRegion ? 5 : 2,
-                            });
-                            myGeoObject.events.add('click', e => {
-                                e.preventDefault();
-                                let _me = e.get('target');
-                                this.mapSetCurrentRegion(_me);
                             });
                             this.regionsManager.add(myGeoObject);
                         });
