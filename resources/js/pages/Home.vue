@@ -87,8 +87,8 @@
                         <h2>Выбранные пересечения</h2>
                         <div v-for="intersect in choosedIntersections" v-bind:key="intersect.properties.get('id')">
                             <hr/>
+                            <button @click="removeIntersection(intersect)" style="float:right">Удалить</button>
                             <div v-html="intersect.properties.get('customHTML')"></div>
-                            <button @click="removeIntersection(intersect)">Удалить</button>
                         </div>
                         <hr/>
                         <button @click="clearChoosedIntersections">Очистить</button><button @click="saveIntersections">Сохранить</button>
@@ -489,10 +489,21 @@ export default {
                 + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare??0)}</p>`
                 + `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`
                 + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
-                + `<p>По типам: ${JSON.stringify(_sportzones_by_types)}</p>`
-                + `<p>По спорту: ${JSON.stringify(_sportzones_by_sports)}</p>`
                 + `<p>Численность населения: ${Math.floor(_population)} чел.</p>`
             ;
+
+            _customHTML += 'По типам спортзон:<br/><table><tr><th>Тип</th><th>Количество</th></tr>';
+            for(var i in _sportzones_by_types){
+                _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_types[i]}</td></tr>`
+            }
+            _customHTML += '</table>';
+
+            _customHTML += '<br/>По видам спорта:<br/><table><tr><th>Тип</th><th>Количество</th></tr>';
+            for(var i in _sportzones_by_sports){
+                _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_sports[i]}</td></tr>`
+            }
+            _customHTML += '</table>';
+
             geoobject.properties.set('customHTML', _customHTML);
         },
 
