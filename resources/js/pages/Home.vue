@@ -295,7 +295,11 @@ export default {
             this.savedIntersManager.removeAll();
             if (this.doShowSavedIntersections)
                 this.paintIntersectionsOnOverlay(this.savedIntersections, this.savedIntersManager);
+            else {
+                this.choosedIntersections = this.choosedIntersections.filter(inter => inter.properties.get('source') != 'db');
+            }
         },
+
         removeIntersection(intersect) {
             let _id = intersect.properties.get('id');
             this.choosedIntersections.splice(this.choosedIntersections.indexOf(intersect), 1);
@@ -407,6 +411,7 @@ export default {
                     sports: '',
                     sportzone_types: '',
                     id: inter.geometry ? 'intersection_' + Date.now() : inter.id,
+                    is_choosed: false
                 },
                 {
                     zIndex: 9000,
@@ -461,6 +466,9 @@ export default {
                     }
                 }
                 this.paintIntersectionsOnOverlay(this.intersectionsPool, this.intersectionsManager);
+            }
+            else {
+                this.choosedIntersections = this.choosedIntersections.filter(inter => inter.properties.get('source') != 'map');
             }
         },
 
