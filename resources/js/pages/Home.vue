@@ -1,20 +1,265 @@
 <template>
     <v-container fluid pa-0>
         <!-- Loading process  -->
-        <v-overlay v-if="!sport_objects" class="overlay" opacity="0">
-            <svg>
-                <circle cx="50" cy="50" r="40" stroke="red" stroke-dasharray="78.5 235.5" stroke-width="3" fill="none"/>
-                <circle cx="50" cy="50" r="30" stroke="blue" stroke-dasharray="62.8 188.8" stroke-width="3" fill="none"/>
-                <circle cx="50" cy="50" r="20" stroke="green" stroke-dasharray="47.1 141.3" stroke-width="3" fill="none"/>
-            </svg>
-            <h2>Загрузка данных...</h2>
-        </v-overlay>
+        <!--        <v-overlay v-if="!sport_objects" class="overlay" opacity="0">
+                    <svg>
+                        <circle cx="50" cy="50" r="40" stroke="red" stroke-dasharray="78.5 235.5" stroke-width="3" fill="none"/>
+                        <circle cx="50" cy="50" r="30" stroke="blue" stroke-dasharray="62.8 188.8" stroke-width="3" fill="none"/>
+                        <circle cx="50" cy="50" r="20" stroke="green" stroke-dasharray="47.1 141.3" stroke-width="3" fill="none"/>
+                    </svg>
+                    <h2>Загрузка данных...</h2>
+                </v-overlay>-->
+        <!-- Rendering circles process  -->
+        <progress v-if="doPaintCircles && loaded > 0 && loaded < total" :value="loaded" :max="total"
+                  style="width: 30%; min-width: 300px; position: absolute; bottom: 8%; left: 50%; z-index: 400; transform: translate(-50%,-50%)"/>
+        <!-- Mobile navigation  -->
+        <v-bottom-navigation :input-value="!$vuetify.breakpoint.mdAndUp" fixed background-color="#f5f5f5" grow height="44">
+            <!-- Filters -->
+            <v-dialog v-model="filters_dialog" width="400px">
+                <template v-slot:activator="{ on }">
+                    <v-btn large v-on="on">
+                        <span>Фильтры</span>
+                        <v-icon>filter_alt</v-icon>
+                    </v-btn>
+                </template>
+                <v-card class="pa-4 pb-3 d-flex flex-column">
+                    <!--  Фильтр по ведомству -->
+                    <v-select
+                        v-model="selected_organisations"
+                        :items="organisations ? organisations.map(el => el.name).filter(el => organisations_filter ? (el.toLowerCase().indexOf(organisations_filter.toLowerCase())) !== -1 : true) : []"
+                        :menu-props="{ maxHeight: '400', maxWidth:'300' }"
+                        outlined
+                        dense
+                        multiple
+                        hide-details
+                        clearable
+                        placeholder="Ведомство"
+                        class="mt-2"
+                    >
+                        <template v-slot:prepend-item>
+                            <v-list-item>
+                                <v-text-field v-model.lazy.trim="organisations_filter" prepend-icon="search" hide-details dense outlined placeholder="Поиск..."/>
+                            </v-list-item>
+                            <v-divider class="mt-2"/>
+                        </template>
+                        <template v-slot:selection="{ item, index }">
+                            <v-chip v-if="index < 2" class="my-1" style="white-space: normal; word-break: break-word">
+                                <span>{{ item }}</span>
+                            </v-chip>
+                            <span
+                                v-if="index === 2"
+                                class="grey--text text-caption"
+                            >
+                          (+{{ selected_organisations.length - 1 }} others)
+                        </span>
+                        </template>
+                    </v-select>
+                    <!--  Фильтр по видам спорта и спорт зон -->
+                    <v-row class="mt-3">
+                        <v-col cols="6">
+                            <!-- Виды спорта -->
+                            <v-select
+                                v-model="selected_types_of_sports"
+                                :items="sports ?
+                    sports.map(el => el.name)
+                    .filter(el => types_of_sports_filter ? (el.toLowerCase().indexOf(types_of_sports_filter.toLowerCase())) !== -1 : true)
+                    : []"
+                                :menu-props="{ maxHeight: '400', maxWidth:'300' }"
+                                outlined
+                                dense
+                                multiple
+                                hide-details
+                                placeholder="Вид спорта"
+                            >
+                                <template v-slot:prepend-item>
+                                    <v-list-item>
+                                        <v-text-field v-model.lazy.trim="types_of_sports_filter" prepend-icon="search" hide-details dense outlined
+                                                      placeholder="Поиск..."/>
+                                    </v-list-item>
+                                    <v-divider class="mt-2"/>
+                                </template>
+                                <template v-slot:selection="{ item, index }">
+                                    <v-chip v-if="index < 2" class="my-1" style="white-space: normal; word-break: break-word">
+                                        <span>{{ item }}</span>
+                                    </v-chip>
+                                    <span
+                                        v-if="index === 2"
+                                        class="grey--text text-caption"
+                                    >
+                          (+{{ selected_types_of_sports.length - 1 }} others)
+                        </span>
+                                </template>
+                            </v-select>
+                        </v-col>
+                        <v-col cols="6">
+                            <!--  Спорт зоны -->
+                            <v-select
+                                v-model="selected_types_of_sports_zones"
+                                :items="types_of_sports_zones ?
+                    types_of_sports_zones.map(el => el.name)
+                    .filter(el => types_of_sports_zones_filter ? (el.toLowerCase().indexOf(types_of_sports_zones_filter.toLowerCase())) !== -1 : true)
+                    : []"
+                                :menu-props="{ maxHeight: '400', maxWidth:'300' }"
+                                outlined
+                                dense
+                                multiple
+                                hide-details
+                                placeholder="Тип спорт.зоны"
+                            >
+                                <template v-slot:prepend-item>
+                                    <v-list-item>
+                                        <v-text-field v-model.lazy.trim="types_of_sports_zones_filter" prepend-icon="search" hide-details dense outlined
+                                                      placeholder="Поиск..."/>
+                                    </v-list-item>
+                                    <v-divider class="mt-2"/>
+                                </template>
+                                <template v-slot:selection="{ item, index }" style="white-space: normal;">
+                                    <v-chip v-if="index < 2" class="my-1" style="white-space: normal; word-break: break-word">
+                                        <span>{{ item }}</span>
+                                    </v-chip>
+                                    <span
+                                        v-if="index === 2"
+                                        class="grey--text text-caption"
+                                    >
+                          (+{{ selected_types_of_sports.length - 1 }} others)
+                        </span>
+                                </template>
+                            </v-select>
+                        </v-col>
+                    </v-row>
+                    <!--  Поиск по наименованию спорт зоны -->
+                    <v-text-field
+                        v-model.lazy.trim="search_sportzone_name"
+                        class="mt-6"
+                        append-icon="search"
+                        hide-details
+                        dense
+                        outlined
+                        placeholder="Наименование спорт зоны"
+                    />
+                    <!--  Фильтр по доступности -->
+                    <label class="align-self-center mt-4">Доступность</label>
+                    <v-btn-toggle v-model="selected_accessibility" active-class="primary--text" class="d-flex flex-wrap">
+                        <v-col cols="6" v-for="(el) in accessibility" :key="el.name">
+                            <v-btn :value="el.name" v-text="el.name" outlined width="100%" style="white-space: normal !important;"/>
+                        </v-col>
+                    </v-btn-toggle>
+
+                    <!--  Actions  -->
+                    <v-btn @click="filters_dialog = false" color="primary" width="50%" class="mt-4 align-self-center">Закрыть</v-btn>
+                    <v-btn @click="dropFilters()" class="mt-2 align-self-center" text>
+                        <v-icon class="mr-1" small>close</v-icon>
+                        Сбросить всё
+                    </v-btn>
+                </v-card>
+            </v-dialog>
+            <!-- Layers -->
+            <v-dialog v-model="layers_dialog" width="400px">
+                <template v-slot:activator="{ on }">
+                    <v-btn large v-on="on">
+                        <span>Слои</span>
+                        <v-icon>layers</v-icon>
+                    </v-btn>
+                </template>
+                <v-card class="pa-4 d-flex flex-column">
+                    <!--  Слои -->
+                    <label class="align-self-center mt-1">Слои карты</label>
+                    <v-row class="px-5">
+                        <v-col cols="6" class="py-2">
+                            <v-checkbox
+                                v-model="doPaintRegions"
+                                label="Регионы"
+                                hide-details
+                            />
+                        </v-col>
+                        <v-col cols="6" class="py-2">
+                            <v-checkbox
+                                v-model="doPaintSportZones"
+                                label="Спортплощадки"
+                                hide-details
+                            />
+                        </v-col>
+                        <v-col cols="6" class="py-2">
+                            <v-checkbox
+                                v-model="doPaintSpHeatmap"
+                                label="Хитмап объектов"
+                                hide-details
+                            />
+                        </v-col>
+                        <v-col cols="6" class="py-2">
+                            <v-checkbox
+                                v-model="doPaintPopHeatmap"
+                                label="Хитмап населения"
+                                hide-details
+                            />
+                        </v-col>
+                        <v-col cols="6" class="py-2">
+                            <v-checkbox
+                                v-model="doPaintCircles"
+                                label="Доступность"
+                                hide-details
+                            />
+                        </v-col>
+                        <v-col cols="6" class="py-2">
+                            <v-checkbox
+                                v-model="doShowEmptySpaces"
+                                label="Пустоты"
+                                hide-details
+                            />
+                        </v-col>
+                        <v-col cols="6" class="py-2">
+                            <v-checkbox
+                                v-model="doShowIntersections"
+                                label="Пересечения"
+                                hide-details
+                            />
+                        </v-col>
+                    </v-row>
+                    <v-divider class="mt-6"/>
+                    <!--  Нормаль площади -->
+                    <label class="mt-4 align-self-center">Нормаль площади</label>
+                    <v-text-field
+                        v-model.lazy.number="squareNormal"
+                        class="mt-2"
+                        hide-details
+                        type="number"
+                        dense
+                        outlined
+                        suffix="㎡"
+                    />
+                    <!--  Actions  -->
+                    <v-btn @click="layers_dialog = false" color="primary" class="mt-4 align-self-center">Закрыть</v-btn>
+                </v-card>
+            </v-dialog>
+            <!-- Reports -->
+            <v-dialog v-model="reports_dialog" width="400px">
+                <template v-slot:activator="{ on }">
+                    <v-btn large v-on="on">
+                        <span>Отчёты</span>
+                        <v-icon>summarize</v-icon>
+                    </v-btn>
+                </template>
+                <v-card class="pa-4 d-flex flex-column">
+                    <label class="align-self-center mt-1">Варианты выгрузки:</label>
+                    <!--  Варианты выгрузки -->
+                    <v-btn class="mt-4" @click="unloadingPdf()">
+                        <v-icon class="mr-1" color="primary">picture_as_pdf</v-icon>PDF
+                    </v-btn>
+                    <v-btn class="mt-2" @click="unloadingExcel()">
+                        <v-icon class="mr-1" color="primary">grid_on</v-icon>Excel
+                    </v-btn>
+                    <!--  Actions  -->
+                    <v-btn @click="reports_dialog = false" color="primary" class="mt-4 align-self-center">Закрыть</v-btn>
+                </v-card>
+            </v-dialog>
+        </v-bottom-navigation>
+
         <!-- Page -->
         <section style="height: 100vh; overflow: hidden;" class="d-flex flex-column-reverse flex-md-row">
             <!-- Left/Bot Col -->
-            <v-col cols="6" md="5" class="d-flex" style="overflow: auto; max-width: 100%">
+            <v-col cols="5" class="d-flex" style="overflow: auto; max-width: 100%">
                 <!-- Регионы -->
-                <!--<v-col cols="4" class="pa-0">
+                <v-col cols="4" class="pa-0">
                     <v-text-field
                         v-model="search_region"
                         hide-details
@@ -26,50 +271,17 @@
                 </v-col>
                 <v-col class="text-center pa-0">
                     <v-divider vertical/>
-                </v-col>-->
+                </v-col>
                 <!-- Фильтры и спортивные события -->
                 <v-col cols="7" class="pa-0">
-                    <!--<v-text-field
+                    <v-text-field
                         v-model="search_region"
                         hide-details
                         placeholder="Поиск спортивного объекта..."
                         append-icon="search"
                         outlined
                         dense
-                    />-->
-                    <v-select
-                        v-model="selected_types_of_sports"
-                        :items="sports ?
-                    sports.map(el => el.name)
-                    .filter(el => types_of_sports_filter ? (el.toLowerCase().indexOf(types_of_sports_filter.toLowerCase())) !== -1 : true)
-                    : []"
-                        :menu-props="{ maxHeight: '400', maxWidth:'300' }"
-                        outlined
-                        dense
-                        multiple
-                        hide-details
-                        clearable
-                        placeholder="Выберите вид спорта"
-                        class="mt-4"
-                    >
-                        <template v-slot:prepend-item>
-                            <v-list-item>
-                                <v-text-field v-model.lazy.trim="types_of_sports_filter" prepend-icon="search" hide-details dense outlined placeholder="Поиск..."/>
-                            </v-list-item>
-                            <v-divider class="mt-2"></v-divider>
-                        </template>
-                        <template v-slot:selection="{ item, index }">
-                            <v-chip v-if="index < 2">
-                                <span>{{ item }}</span>
-                            </v-chip>
-                            <span
-                                v-if="index === 2"
-                                class="grey--text text-caption"
-                            >
-                          (+{{ selected_types_of_sports.length - 1 }} others)
-                        </span>
-                        </template>
-                    </v-select>
+                    />
                     <section class="mt-4">
                         <label>Регионы: <input type="checkbox" v-model="doPaintRegions"/></label><br/>
                         <label>Спортплощадки: <input type="checkbox" v-model="doPaintSportZones" @change="paintSportZones"/></label><br/>
@@ -77,7 +289,8 @@
                         <label>Хитмап населения: <input type="checkbox" v-model="doPaintPopHeatmap"/></label><br/>
                         <label>Доступность: <input type="checkbox" v-model="doPaintCircles"/></label><br/>
                         <label>Пустоты: <input type="checkbox" v-model="doShowEmptySpaces" @change="paintEmptySpaces"/></label><br/>
-                        <label>Пересечения: <input type="checkbox" v-model="doShowIntersections" @change="paintIntersections"/></label> {{intersectionsPool.length}}<br/>
+                        <label>Пересечения: <input type="checkbox" v-model="doShowIntersections" @change="paintIntersections"/></label>
+                        {{ intersectionsPool.length }}<br/>
                         <label>Нормаль площади: <input type="number" v-model="squareNormal" @change="flushMainOverlay"/></label><br/>
                     </section>
                     <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4">
@@ -85,11 +298,7 @@
                 </v-col>
             </v-col>
             <!-- Right/Top Col -->
-            <v-col cols="6" md="7" class="pa-0" style="max-width: 100%;">
-                <div id='map'/>
-<!--                &lt;!&ndash; Rendering process  &ndash;&gt;
-                <progress v-if="loaded > 0 && loaded < total" :value="loaded" :max="total" style="width: 108px; position: relative; top: 38px; left: 10px; z-index: 400;"/>-->
-            </v-col>
+            <v-col cols="7" class="pa-0" style="max-width: 100%;" id="map"/>
         </section>
     </v-container>
 </template>
@@ -103,10 +312,29 @@ export default {
     name: "Home",
     data() {
         return {
-            // filters
             selected_sport_object_id: null,
+            search_region: null,
+            search_sport_object: null,
+            search_sportzone_name: null,
+
+            // Диалоговые окна
+            filters_dialog: false,
+            layers_dialog: false,
+            reports_dialog: false,
+
+            // Фильтры
+            // Ведомства
+            selected_organisations: [],
+            organisations_filter: null,
+            // Виды спорта
             selected_types_of_sports: [],
             types_of_sports_filter: null,
+            // Виды спорт. зон
+            selected_types_of_sports_zones: [],
+            types_of_sports_zones_filter: null,
+            // Доступность
+            selected_accessibility: null,
+
             // map
             myMap: null,
             gridSize: 91,
@@ -147,13 +375,33 @@ export default {
     computed: {
         ...mapState({
             sport_objects: state => state.sport_objects.sport_objects,
-            sports: state => state.sports.sports
+            sports: state => state.sports.sports,
+            organisations: state => state.organisations.organisations,
+            types_of_sports_zones: state => state.types_of_sports_zones.types_of_sports_zones,
+            accessibility: state => state.accessibility.accessibility
         }),
 
         filteredSportObjects() {
             let _pure = [...this.sport_objects || []];
-            //фильтруем
+
+            // TODO
+            // Поиск
+            // По региону
+            // if (this.search_region) _pure = this.filterBySports(_pure);
+            // По спорт зоне
+            // if (this.search_sport_object) _pure = this.filterBySports(_pure);
+            // По названию спорт зоны
+            // if (this.search_sport_object) _pure = this.filterBySports(_pure);
+
+            // TODO
+            // Фильтры
+            // По ведомству
+            // if (this.selected_organisations.length) _pure = this.filterByOrganisations(_pure);
+            // По виду спорта
             if (this.selected_types_of_sports.length) _pure = this.filterBySports(_pure);
+            // По виду спорт зоны
+            // if (this.selected_types_of_sports_zones.length) _pure = this.filterByTypesOfSportsZones(_pure);
+
             return _pure;
         },
 
@@ -224,12 +472,12 @@ export default {
                     `<p>Площадь: ${this.currentRegionGeometry.properties.get('square')}</p>` +
                     `<p>Плотность населения: ${this.currentRegionGeometry.properties.get('population_density')}</p>` +
                     `<p>Количество спорт объектов: ${this.currentRegionGeometry.properties.get('sport_objects_inside')}</p>`
-                ;
+                    ;
             return '';
         }
     },
     methods: {
-        saveIntersection (intrsct){
+        saveIntersection(intrsct) {
             console.log(intrsct, 'saved');
             //собираемая информация: типы спортзон, суммарная площадь, количество зон внутри, виды спорта
             let _sz_count = 0, _sz_types = '', _sz_square = 0, _sz_sports = '';
@@ -239,16 +487,16 @@ export default {
             _sz_sports = intrsct.properties.get('sports');
             //TODO axios на сохранение пересечения и запоминание зон в data (или state)
         },
-        paintSportZones(){
+        paintSportZones() {
             this.sportZonesManager.removeAll();
-            if (this.doPaintSportZones && this.currentRegion > 0){
+            if (this.doPaintSportZones && this.currentRegion > 0) {
                 this.filteredSportObjects.map(el => {
-                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '', _sportsHTML = '';
+                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '',
+                        _sportsHTML = '';
                     //фильтруем по тем, которые входят в выбранный регион
-                    if (this.currentRegionGeometry.geometry.contains(coordinates))
-                    {
+                    if (this.currentRegionGeometry.geometry.contains(coordinates)) {
                         el.params.map(_sz => {
-                            if (_sz){
+                            if (_sz) {
                                 let _szcoordinates = _sz.sportzone_coordinates.replace(/^\(|\)$/g, '').split(',');
                                 let _szo = {
                                     type: "Feature",
@@ -263,7 +511,7 @@ export default {
                                         "balloonContentBody":
                                             'Площадь: ' + _sz.sportzone_square + 'кв.м.'
                                             + '<br/>Тип: ' + _sz.sportzone_type_name
-                                            ,
+                                        ,
                                         "balloonContentFooter": 'FOOTER',
                                         "clusterCaption": _sz.sportzone_name, //подпись и слева и справа
                                         "hintContent": _sz.sportzone_name
@@ -280,11 +528,11 @@ export default {
             }
         },
         //преобразует ymaps circle в turf polygon через преобразование Меркатора
-        createTurfMerkatorEllipsePolygon(geometry){
+        createTurfMerkatorEllipsePolygon(geometry) {
             //из-за того, что turf не учитывает преобразование Меркатора, рисуем эллипс с этим учетом
             let _merkator = turf.ellipse(geometry.coordinates,
-                geometry.radius*Math.cos(geometry.coordinates[0]*Math.PI/180)*0.85*1.65, //верхний радиус
-                geometry.radius*1.77,
+                geometry.radius * Math.cos(geometry.coordinates[0] * Math.PI / 180) * 0.85 * 1.65, //верхний радиус
+                geometry.radius * 1.77,
                 {units: 'meters', steps: 72,}
             );
             //из-за того, что turf работает только с полигонами, преобразуем эллипс в полигон
@@ -292,13 +540,13 @@ export default {
             return _merkator;
         },
 
-        paintIntersections(){
+        paintIntersections() {
             this.intersectionsPool = [];
             this.intersectionsManager.removeAll();
-            if (this.doShowIntersections && this.currentRegion > 0){
+            if (this.doShowIntersections && this.currentRegion > 0) {
                 //выбираем оттуда все объекты района
-                for (var i = 0, len = this.objectsOverlay.objects.getAll().length; i < len-1; i++){
-                    for (var j = i+1; j < len; j++){
+                for (var i = 0, len = this.objectsOverlay.objects.getAll().length; i < len - 1; i++) {
+                    for (var j = i + 1; j < len; j++) {
                         let first_obj = this.objectsOverlay.objects.getAll()[i];
                         let second_obj = this.objectsOverlay.objects.getAll()[j];
                         let _firstPoly = this.createTurfMerkatorEllipsePolygon(first_obj.geometry);
@@ -310,16 +558,16 @@ export default {
                 }
                 this.intersectionsPool.map(inter => {
                     let _tomap = new ymaps.Polygon(inter.geometry.coordinates,
-                    {
-                        "hintContent": "Выбрать пересечение",
-                        balloonContent: "Пересечение"
-                    },
-                    {
-                        "zIndex": 9000,
-                        opacity: 0.5,
-                        fillColor: '#3ac255',
-                        "strokeColor": '#000000'
-                    });
+                        {
+                            "hintContent": "Выбрать пересечение",
+                            balloonContent: "Пересечение"
+                        },
+                        {
+                            "zIndex": 9000,
+                            opacity: 0.5,
+                            fillColor: '#3ac255',
+                            "strokeColor": '#000000'
+                        });
                     _tomap.events.add('click', e => {
                         let _me = e.get('target');
                         this.countSportzonesInside(_me);
@@ -339,18 +587,17 @@ export default {
             }
         },
 
-        countSportzonesInside (geoobject){
+        countSportzonesInside(geoobject) {
             let _count = 0, _totalSquare = 0, _sports = [], _sztypes = [], _customHTML = '', _customFooter = '';
             this.filteredSportObjects.map(el => {
                 let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
                 //фильтруем по тем, которые входят в выбранный регион
-                if (geoobject.geometry.contains(coordinates))
-                {
+                if (geoobject.geometry.contains(coordinates)) {
                     el.params.map(_sz => {
-                        if (_sz){
+                        if (_sz) {
                             let _szcoordinates = _sz.sportzone_coordinates.replace(/^\(|\)$/g, '').split(',');
-                            if (geoobject.geometry.contains(_szcoordinates)){
-                                _count ++;
+                            if (geoobject.geometry.contains(_szcoordinates)) {
+                                _count++;
                                 _totalSquare += _sz.sportzone_square;
                                 _sports.push(_sz.sport);
                                 _sztypes.push(_sz.sportzone_type_name);
@@ -375,10 +622,10 @@ export default {
             geoobject.properties.set('balloonContentFooter', _customFooter);
         },
 
-        paintEmptySpaces(){
+        paintEmptySpaces() {
             this.emptySpacesManager.removeAll();
             this.emptyRegion = null;
-            if (this.doShowEmptySpaces && this.currentRegion > 0){
+            if (this.doShowEmptySpaces && this.currentRegion > 0) {
                 //копируем текущий район
                 this.emptyRegion = {...this.currentRegionGeometry};
                 let _diff = turf.polygon(this.emptyRegion.geometry.getCoordinates());
@@ -389,15 +636,14 @@ export default {
                     _diff = difference;
                 });
                 //если вдруг район разбился кругами на несколько, то обходим как мультиполигон
-                if (_diff.geometry.type == "MultiPolygon"){
+                if (_diff.geometry.type == "MultiPolygon") {
                     _diff.geometry.coordinates.map(coords => {
                         let _localpoly = new ymaps.Polygon(coords, null, {
                             fillColor: '#00000080'
                         });
                         this.emptySpacesManager.add(_localpoly);
                     });
-                }
-                else{
+                } else {
                     _diff = new ymaps.Polygon(_diff.geometry.coordinates, null, {
                         fillColor: '#00000080'
                     });
@@ -406,22 +652,22 @@ export default {
             }
         },
         // ховер по объекту
-        mouseOverObject(e){
+        mouseOverObject(e) {
             //todo hover только для кругов?
             var objectId = e.get('objectId'),
                 objectGeometry = this.objectsManager.objects.getById(objectId).geometry.type;
-                if (e.get('type') === 'mouseenter') {
-                    this.objectsManager.objects.setObjectOptions(objectId, {
-                        fillColor: '#00000080'
-                    });
-                } else {
-                    this.objectsManager.objects.setObjectOptions(objectId, {
-                        fillColor: '#ffffff00'
-                    });
-                }
+            if (e.get('type') === 'mouseenter') {
+                this.objectsManager.objects.setObjectOptions(objectId, {
+                    fillColor: '#00000080'
+                });
+            } else {
+                this.objectsManager.objects.setObjectOptions(objectId, {
+                    fillColor: '#ffffff00'
+                });
+            }
         },
         //клик на объекте
-        clickOnObject(e){
+        clickOnObject(e) {
             var objectId = e.get('objectId'),
                 objectGeometry = this.objectsManager.objects.getById(objectId).geometry.type;
             /* это пример изменения по id объекта
@@ -430,7 +676,7 @@ export default {
             });
             */
         },
-        filterBySports(objects){
+        filterBySports(objects) {
             return objects.filter(sport_object => {
                 let el_find = false;
                 sport_object.params.forEach(param => {
@@ -439,7 +685,7 @@ export default {
                 return el_find;
             });
         },
-        mapSetCurrentRegion(region){
+        mapSetCurrentRegion(region) {
             if (region.properties.get('osm_id') == this.currentRegion)
                 return;
             this.currentRegion = region.properties.get('osm_id');
@@ -454,14 +700,14 @@ export default {
             this.paintIntersections();
             this.paintSportZones();
         },
-        mapSetBounds(geoObject){
+        mapSetBounds(geoObject) {
             this.mapScopeObject = new ymaps.GeoObjectCollection({}, {});
             this.myMap.geoObjects.add(this.mapScopeObject);
             this.mapScopeObject.add(geoObject);
             this.myMap.setBounds(this.mapScopeObject.getBounds());
         },
         //пересоздаёт OM объектов
-        flushMainOverlay(){
+        flushMainOverlay() {
             this.myMap.geoObjects.remove(this.objectsManager);
             this.objectsOverlay = null;
             this.paintObjects();
@@ -474,17 +720,18 @@ export default {
             this.loaded = 0;
             // Порционная отрисовка объектов
             let _objectsinsideRegion = 0;
-            for (var i = 0, count_per_step = this.doPaintCircles? 100 : 1000, len = this.filteredSportObjects.length; i < len; i += count_per_step) {
-                let data = []; let processed = 0;
+            for (var i = 0, count_per_step = this.doPaintCircles ? 100 : 1000, len = this.filteredSportObjects.length; i < len; i += count_per_step) {
+                let data = [];
+                let processed = 0;
                 this.filteredSportObjects.slice(i, i + count_per_step).map(el => {
-                    processed ++;
-                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '', _sportsHTML = '';
+                    processed++;
+                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '',
+                        _sportsHTML = '';
                     //фильтруем по тем, которые входят в выбранный регион
-                    if (this.currentRegionGeometry.geometry.contains(coordinates))
-                    {
+                    if (this.currentRegionGeometry.geometry.contains(coordinates)) {
                         this.currentRegionGeometry.properties.set('sport_objects_inside', ++_objectsinsideRegion);
                         el.params.map(_sz => {
-                            if (_sz){
+                            if (_sz) {
                                 _szones.push(_sz.sportzone_type_name);
                                 _squares.push(_sz.sportzone_square);
                                 _sports.push(_sz.sport);
@@ -497,9 +744,9 @@ export default {
 
                         //суммарная площадь входящих спортплощадок и цвет окружности
                         // object_total_square in [0; 5kk]
-                        el.squareColor =  `rgba(${255*(this.squareNormal - el.object_total_square)/this.squareNormal}, ${el.object_total_square > this.squareNormal ? 255 : 255*(0 + el.object_total_square) / this.squareNormal}, 0, 1)`;
+                        el.squareColor = `rgba(${255 * (this.squareNormal - el.object_total_square) / this.squareNormal}, ${el.object_total_square > this.squareNormal ? 255 : 255 * (0 + el.object_total_square) / this.squareNormal}, 0, 1)`;
 
-                        if (_szones.length > 0){
+                        if (_szones.length > 0) {
                             _szonesHTML += '<label>Состав:</label>';
                             _szonesHTML += '<ul>';
                             _szones.map((e, i) => {
@@ -508,7 +755,7 @@ export default {
                             _szonesHTML += '</ul>'
                         }
 
-                        if (_sports.length > 0){
+                        if (_sports.length > 0) {
                             _sportsHTML += '<label>Виды спорта:</label>';
                             _sportsHTML += '<ul>';
                             _sports.map(e => {
@@ -572,7 +819,7 @@ export default {
                                     "name": feature.properties.NAME,
                                     "hintContent": "Выбрать: " + feature.properties.NAME,
                                     "osm_id": feature.properties.OSM_ID,
-                                    "sport_objects_inside" : 0,
+                                    "sport_objects_inside": 0,
                                     "population": feature.properties.count_persons,
                                     "square": feature.properties.area + ' кв.км',
                                     "population_density": Math.floor(feature.properties.count_persons / feature.properties.area) + ' на кв.км.',
@@ -669,14 +916,33 @@ export default {
                     this.spHeatmap.setMap(this.myMap);
                 });
             }
-        }
+        },
+
+        // TODO
+        // Выгрузка в pdf
+        unloadingPdf() {
+
+        },
+        // TODO
+        // Выгрузка в excel
+        unloadingExcel() {
+
+        },
+        // Сбросить все фильтры
+        dropFilters() {
+            this.selected_accessibility = null;
+            this.selected_organisations = [];
+            this.selected_types_of_sports_zones = [];
+            this.selected_types_of_sports = [];
+            this.search_sportzone_name = null;
+        },
     },
     watch: {
         // Перерисовка объектов на карте
         filteredSportObjects(v) {
             this.total = v.length ?? 0;
             this.objectsManager.removeAll();
-            if (this.currentRegion > 0){
+            if (this.currentRegion > 0) {
                 this.paintObjects();
                 this.paintSportHeatmap(); //перерисовка хитмапа объектов
             }
@@ -713,6 +979,12 @@ export default {
                 // Автоматически растягивать карту по размерам контейнера
                 autoFitToViewport: 'always'
             });
+            // Удаляем нерабочие кнопки-функции с карты
+            // Определения геолокации
+            this.myMap.controls.remove('geolocationControl');
+            // Поиск
+            this.myMap.controls.remove('searchControl');
+
             this.myMap.events.add('balloonopen', e => {
                 let _me = e.get('target');
                 //обработчик кнопки "сохранить"
@@ -729,7 +1001,6 @@ export default {
 <style scoped>
 #map {
     border: 1px solid black;
-    height: 100%;
 }
 
 /* Loader */

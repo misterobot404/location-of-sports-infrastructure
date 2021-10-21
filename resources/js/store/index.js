@@ -9,6 +9,7 @@ import relations from "./modules/relations";
 import sport_objects from "./modules/sport_objects";
 import accessibility from "./modules/accessibility";
 import organisations from "./modules/organisations";
+import types_of_sports_zones from "./modules/types_of_sports_zones";
 
 export default new Vuex.Store({
     strict: true,
@@ -21,6 +22,7 @@ export default new Vuex.Store({
         sport_objects,
         accessibility,
         organisations,
+        types_of_sports_zones,
         auth,
     }
 })
