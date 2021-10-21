@@ -243,10 +243,12 @@
                     <label class="align-self-center mt-1">Варианты выгрузки:</label>
                     <!--  Варианты выгрузки -->
                     <v-btn class="mt-4" @click="unloadingPdf()">
-                        <v-icon class="mr-1" color="primary">picture_as_pdf</v-icon>PDF
+                        <v-icon class="mr-1" color="primary">picture_as_pdf</v-icon>
+                        PDF
                     </v-btn>
                     <v-btn class="mt-2" @click="unloadingExcel()">
-                        <v-icon class="mr-1" color="primary">grid_on</v-icon>Excel
+                        <v-icon class="mr-1" color="primary">grid_on</v-icon>
+                        Excel
                     </v-btn>
                     <!--  Actions  -->
                     <v-btn @click="reports_dialog = false" color="primary" class="mt-4 align-self-center">Закрыть</v-btn>
@@ -255,47 +257,60 @@
         </v-bottom-navigation>
 
         <!-- Page -->
-        <section style="height: 100vh; overflow: hidden;" class="d-flex flex-column-reverse flex-md-row">
+        <section style="height: 100vh;" class="d-flex flex-column-reverse flex-md-row overflow-hidden">
             <!-- Left/Bot Col -->
-            <v-col cols="5" class="d-flex" style="overflow: auto; max-width: 100%">
-                <!-- Регионы -->
-                <v-col cols="4" class="pa-0">
-                    <v-text-field
-                        v-model="search_region"
-                        hide-details
-                        placeholder="Поиск района..."
-                        append-icon="search"
-                        outlined
-                        dense
-                    />
-                </v-col>
-                <v-col class="text-center pa-0">
-                    <v-divider vertical/>
-                </v-col>
-                <!-- Фильтры и спортивные события -->
-                <v-col cols="7" class="pa-0">
-                    <v-text-field
-                        v-model="search_region"
-                        hide-details
-                        placeholder="Поиск спортивного объекта..."
-                        append-icon="search"
-                        outlined
-                        dense
-                    />
-                    <section class="mt-4">
-                        <label>Регионы: <input type="checkbox" v-model="doPaintRegions"/></label><br/>
-                        <label>Спортплощадки: <input type="checkbox" v-model="doPaintSportZones" @change="paintSportZones"/></label><br/>
-                        <label>Хитмап объектов: <input type="checkbox" v-model="doPaintSpHeatmap"/></label><br/>
-                        <label>Хитмап населения: <input type="checkbox" v-model="doPaintPopHeatmap"/></label><br/>
-                        <label>Доступность: <input type="checkbox" v-model="doPaintCircles"/></label><br/>
-                        <label>Пустоты: <input type="checkbox" v-model="doShowEmptySpaces" @change="paintEmptySpaces"/></label><br/>
-                        <label>Пересечения: <input type="checkbox" v-model="doShowIntersections" @change="paintIntersections"/></label>
-                        {{ intersectionsPool.length }}<br/>
-                        <label>Нормаль площади: <input type="number" v-model="squareNormal" @change="flushMainOverlay"/></label><br/>
-                    </section>
-                    <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4">
-                    </div>
-                </v-col>
+            <v-col cols="5" class="d-flex flex-column flex-md-row overflow-hidden" style="max-width: 100%">
+                <!-- Desktop -->
+                <template v-if="$vuetify.breakpoint.mdAndUp">
+                    <!-- Регионы -->
+                    <v-col cols="4" class="pa-0">
+                        <v-text-field
+                            v-model="search_region"
+                            hide-details
+                            placeholder="Поиск района..."
+                            append-icon="search"
+                            outlined
+                            dense
+                        />
+                    </v-col>
+                    <v-col cols="1" class="text-center pa-0">
+                        <v-divider vertical/>
+                    </v-col>
+                    <!-- Фильтры и спортивные события -->
+                    <v-col cols="7" class="pa-0">
+                        <v-text-field
+                            v-model="search_region"
+                            hide-details
+                            placeholder="Поиск спортивного объекта..."
+                            append-icon="search"
+                            outlined
+                            dense
+                        />
+                        <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4"/>
+                    </v-col>
+                </template>
+                <!-- Mobile -->
+                <template v-else>
+                    <!-- Регионы -->
+                    <v-row style="flex-wrap: nowrap; min-height: 100px" class="overflow-y-auto flex-grow-0">
+                        <v-card v-for="(el) in getRegions" :key="el.osm_id" class="text-wrap ma-2 pa-2">
+                            <label style="font-size: 14px">{{ el.name }}</label>
+                        </v-card>
+                    </v-row>
+                    <v-row>
+                        <v-divider/>
+                    </v-row>
+                    <!-- Фильтры и спортивные события -->
+                    <v-row class="overflow-y-auto">
+                        <v-col cols="6" class="pa-2" v-for="(el) in getRegions" :key="el.osm_id">
+                            <v-card  height="100" class="text-wrap pa-2">
+                                <label>{{ el.name }}</label>
+                            </v-card>
+                        </v-col>
+                        <!-- TODO Куда деть информацию о выбранной области -->
+                        <!--                            <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4"/>-->
+                    </v-row>
+                </template>
             </v-col>
             <!-- Right/Top Col -->
             <v-col cols="7" class="pa-0" style="max-width: 100%;" id="map"/>
@@ -474,6 +489,15 @@ export default {
                     `<p>Количество спорт объектов: ${this.currentRegionGeometry.properties.get('sport_objects_inside')}</p>`
                     ;
             return '';
+        },
+
+        getRegions() {
+            return regions_geo.features.map(feature => {
+                return {
+                    name: feature.properties.NAME,
+                    osm_id: feature.properties.OSM_ID
+                }
+            });
         }
     },
     methods: {
