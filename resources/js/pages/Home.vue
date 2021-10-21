@@ -140,7 +140,6 @@ export default {
 
             currentRegion: null, //выбранный регион
             currentRegionGeometry: null,
-            mapScopeObject: null, //центрирование карты на объекте
 
             squareNormal: 1000, //нормаль площадей
 
@@ -439,7 +438,7 @@ export default {
                 //считаем, сколько объектов входит в пересечение
                 this.filteredSportObjects.map(el => {
                     let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
-                    //фильтруем по тем, которые входят в выбранный регион
+                    //фильтруем по тем, которые входят в выбранное пересечение
                     if (geoobject.geometry.contains(coordinates))
                         el.params.map(_sz => {
                             if (_sz){
@@ -498,7 +497,7 @@ export default {
             }
             _customHTML += '</table>';
 
-            _customHTML += '<br/>По видам спорта:<br/><table><tr><th>Тип</th><th>Количество</th></tr>';
+            _customHTML += '<br/>По видам спорта:<br/><table><tr><th>Вид спорта</th><th>Количество</th></tr>';
             for(var i in _sportzones_by_sports){
                 _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_sports[i]}</td></tr>`
             }
@@ -565,6 +564,9 @@ export default {
         mapSetCurrentRegion(region){
             if (region.properties.get('osm_id') == this.currentRegion)
                 return;
+            this.regionsManager.each(rg => {
+                rg.options.set('strokeWidth', '2');
+            });
             this.currentRegion = region.properties.get('osm_id');
             this.currentRegionGeometry = region;
             region.options.set('strokeWidth', '5');
@@ -578,10 +580,7 @@ export default {
             this.paintSportZones();
         },
         mapSetBounds(geoObject){
-            this.mapScopeObject = new ymaps.GeoObjectCollection({}, {});
-            this.myMap.geoObjects.add(this.mapScopeObject);
-            this.mapScopeObject.add(geoObject);
-            this.myMap.setBounds(this.mapScopeObject.getBounds());
+            this.myMap.setBounds(geoObject.geometry.getBounds());
         },
         //пересоздаёт OM объектов
         flushMainOverlay(){
@@ -703,7 +702,7 @@ export default {
                             }, {
                                 fillColor: 'rgba(0, 0, 255, 0)',
                                 strokeColor: '#3390FF',
-                                strokeWidth: 2,
+                                strokeWidth: feature.properties.OSM_ID == this.currentRegion ? 5 : 2,
                             });
                             myGeoObject.events.add('click', e => {
                                 e.preventDefault();
