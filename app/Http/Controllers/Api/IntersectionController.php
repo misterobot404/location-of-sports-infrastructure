@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Intersection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class IntersectionController extends Controller
 {
@@ -16,14 +17,16 @@ class IntersectionController extends Controller
         ], 200);
     }
 
-    public function store()
+    public function store(Request $request)
     {
         $intersection = new Intersection();
-        $intersection->polygon = request('polygon');
+        $intersection->polygon_json = request('polygon_json');
+        //$intersection->polygon = request('polygon'); TODO беда с этим типом
         $intersection->area = request('area');
         $intersection->type_sportzones = request('type_sportzones');
         $intersection->type_sports = request('type_sports');
         $intersection->sportzones_count = request('sportzones_count');
+        $intersection->population = request('population');
         $intersection->save();
 
         // 204 No Content - operation successful
