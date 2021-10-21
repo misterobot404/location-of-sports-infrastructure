@@ -287,8 +287,10 @@
                             dense
                         />
                         <div v-show="currentRegion" v-html="currentRegionInfo" class="mt-4"/>
-                        <label>Пересечения: <input type="checkbox" v-model="doShowIntersections" @change="paintIntersections"/></label> {{intersectionsPool.length}}<br/>
-                        <label v-show="savedIntersections.length">Сохраненные пересечения: <input type="checkbox" v-model="doShowSavedIntersections" @change="paintSavedIntersections"/></label><br/>
+                        <label>Пересечения: <input type="checkbox" v-model="doShowIntersections" @change="paintIntersections"/></label>
+                        {{ intersectionsPool.length }}<br/>
+                        <label v-show="savedIntersections.length">Сохраненные пересечения: <input type="checkbox" v-model="doShowSavedIntersections"
+                                                                                                  @change="paintSavedIntersections"/></label><br/>
                         <label>Нормаль площади: <input type="number" v-model="squareNormal" @change="flushMainOverlay"/></label><br/>
                         <div v-show="choosedIntersections.length > 0" class="mt-4">
                             <h2>Выбранные пересечения</h2>
@@ -298,7 +300,8 @@
                                 <div v-html="intersect.properties.get('customHTML')"></div>
                             </div>
                             <hr/>
-                            <button @click="clearChoosedIntersections">Очистить</button><button @click="saveIntersections">Сохранить</button>
+                            <button @click="clearChoosedIntersections">Очистить</button>
+                            <button @click="saveIntersections">Сохранить</button>
                         </div>
                     </v-col>
                 </template>
@@ -306,20 +309,21 @@
                 <template v-else>
                     <!-- Регионы -->
                     <v-row style="flex-wrap: nowrap; min-height: 100px" class="overflow-y-auto flex-grow-0">
-                        <v-card v-for="(el) in getRegions" :key="el.osm_id" class="text-wrap ma-2 pa-2">
+                        <v-card v-for="(el) in getRegions" :key="el.osm_id" class="text-wrap ma-2 pa-2" @click="el.valid ? chooseRegionById(el.osm_id) : null"
+                                :style="!el.valid ? 'opacity: 0.5' : null">
                             <label style="font-size: 14px">{{ el.name }}</label>
                         </v-card>
                     </v-row>
                     <v-row>
                         <v-divider/>
                     </v-row>
-                    <!-- Фильтры и спортивные события -->
+                    <!-- Cпортивные события -->
                     <v-row class="overflow-y-auto">
-                        <v-col cols="6" class="pa-2" v-for="(el) in getRegions" :key="el.osm_id">
-                            <v-card  height="100" class="text-wrap pa-2">
-                                <label>{{ el.name }}</label>
+<!--                        <v-col cols="6" class="pa-2" v-for="(sport_object) in filteredSportObjects" :key="sport_object.object__id">
+                            <v-card height="100" class="text-wrap pa-2">
+                                <label>{{ sport_object.object_name }}</label>
                             </v-card>
-                        </v-col>
+                        </v-col>-->
                     </v-row>
                 </template>
             </v-col>
@@ -330,7 +334,6 @@
 </template>
 
 <script>
-import axios from "axios"
 import {mapActions, mapState} from "vuex"
 import regions_geo from '../regions_geo.json'
 import population_heatmaps from '../population_heatmaps.json'
@@ -406,8 +409,7 @@ export default {
         ...mapState({
             sport_objects: state => state.sport_objects.sport_objects,
             sports: state => state.sports.sports,
-            savedIntersections: state => state.intersections.intersections //сохраненные пересечения
-            sports: state => state.sports.sports,
+            savedIntersections: state => state.intersections.intersections, //сохраненные пересечения
             organisations: state => state.organisations.organisations,
             types_of_sports_zones: state => state.types_of_sports_zones.types_of_sports_zones,
             accessibility: state => state.accessibility.accessibility
@@ -427,6 +429,8 @@ export default {
 
             // TODO
             // Фильтры
+            // По выбранному региону
+            if (this.currentRegionGeometry) _pure = this.filterByRegion(_pure);
             // По ведомству
             // if (this.selected_organisations.length) _pure = this.filterByOrganisations(_pure);
             // По виду спорта
@@ -514,7 +518,7 @@ export default {
                     `<p>Площадь: ${this.currentRegionGeometry.properties.get('square')}</p>` +
                     `<p>Плотность населения: ${this.currentRegionGeometry.properties.get('population_density')}</p>` +
                     `<p>Количество спорт объектов: ${this.currentRegionGeometry.properties.get('sport_objects_inside')}</p>`
-                ;
+                    ;
             return '';
         },
 
@@ -525,15 +529,22 @@ export default {
             }
             return this.savedIntersOverlay;
         },
-        },
 
         getRegions() {
-            return regions_geo.features.map(feature => {
-                return {
-                    name: feature.properties.NAME,
-                    osm_id: feature.properties.OSM_ID
-                }
-            });
+            return regions_geo.features
+                .map(feature => {
+                    return {
+                        name: feature.properties.NAME,
+                        osm_id: feature.properties.OSM_ID,
+                        valid: feature.properties.OSM_ID === 2263059
+                            || feature.properties.OSM_ID === 162903
+                            || feature.properties.OSM_ID === 1320234
+                            || feature.properties.OSM_ID === 1278703
+                            || feature.properties.OSM_ID === 226149
+                    }
+                })
+                // Сначала ставим районы с координатами
+                .sort((x, y) =>  Number(y.valid) - Number(x.valid))
         }
     },
     methods: {
@@ -542,7 +553,26 @@ export default {
             deleteInteraction: 'intersections/deleteObject',
         }),
 
-        chooseRegionById (osm_id){
+        // Фильтры
+        filterBySports(objects) {
+            return objects.filter(sport_object => {
+                let el_find = false;
+                sport_object.params.forEach(param => {
+                    if (param && this.selected_types_of_sports.includes(param.sport)) el_find = true;
+                });
+                return el_find;
+            });
+        },
+        filterByRegion(objects) {
+            return objects.filter(el => {
+                let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '',
+                    _sportsHTML = '';
+                //фильтруем по тем, которые входят в выбранный регион
+                return this.currentRegionGeometry.geometry.contains(coordinates);
+            })
+        },
+
+        chooseRegionById(osm_id) {
             this.regionsManager.each(rg => {
                 if (rg.properties.get('osm_id') == osm_id)
                     rg.events.fire('click');
@@ -550,7 +580,7 @@ export default {
         },
 
         //подсвечивает район по osm_id
-        enlightRegionById(osm_id){
+        enlightRegionById(osm_id) {
             this.regionsManager.each(rg => {
                 if (rg.properties.get('osm_id') == osm_id)
                     rg.options.set('strokeWidth', '5');
@@ -558,14 +588,14 @@ export default {
         },
 
         //убирает подсветку со всех районов
-        darkAllRegions (){
+        darkAllRegions() {
             this.regionsManager.each(rg => {
                 if (rg.properties.get('osm_id') != this.currentRegion)
                     rg.options.set('strokeWidth', '2');
             });
         },
 
-        paintSavedIntersections () {
+        paintSavedIntersections() {
             this.savedIntersManager.removeAll();
             if (this.doShowSavedIntersections)
                 this.paintIntersectionsOnOverlay(this.savedIntersections, this.savedIntersManager);
@@ -579,18 +609,18 @@ export default {
             this.choosedIntersections.splice(this.choosedIntersections.indexOf(intersect), 1);
             intersect.properties.set('is_choosed', false);
             intersect.options.set('fillColor', '#3ac255');
-            if (typeof(_id) == 'number'){ //объект из базы
+            if (typeof (_id) == 'number') { //объект из базы
                 this.deleteInteraction(_id);
                 this.savedIntersManager.remove(intersect);
             }
         },
-        clearChoosedIntersections (){
+        clearChoosedIntersections() {
             this.choosedIntersections.map(intersect => {
                 this.removeIntersection(intersect);
             })
             this.choosedIntersections = [];
         },
-        saveIntersections (){
+        saveIntersections() {
             this.choosedIntersections.map(intrsct => {
                 //собираемая информация: типы спортзон, суммарная площадь, количество зон внутри, виды спорта
                 let _sz_count = 0, _sz_types = '', _sz_square = 0, _sz_sports = '', _sz_by_sport = {}, _sz_by_type = {}, _population = 0, _coords = null;
@@ -615,16 +645,16 @@ export default {
                 this.storeInteraction(_params);
             });
         },
-        paintSportZones(){
+        paintSportZones() {
             this.sportZonesManager.removeAll();
-            if (this.doPaintSportZones && this.currentRegion > 0){
+            if (this.doPaintSportZones && this.currentRegion > 0) {
                 this.filteredSportObjects.map(el => {
-                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '', _sportsHTML = '';
+                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '',
+                        _sportsHTML = '';
                     //фильтруем по тем, которые входят в выбранный регион
-                    if (this.currentRegionGeometry.geometry.contains(coordinates))
-                    {
+                    if (this.currentRegionGeometry.geometry.contains(coordinates)) {
                         el.params.map(_sz => {
-                            if (_sz){
+                            if (_sz) {
                                 let _szcoordinates = _sz.sportzone_coordinates.replace(/^\(|\)$/g, '').split(',');
                                 let _szo = {
                                     type: "Feature",
@@ -639,7 +669,7 @@ export default {
                                         "balloonContentBody":
                                             'Площадь: ' + _sz.sportzone_square + 'кв.м.'
                                             + '<br/>Тип: ' + _sz.sportzone_type_name
-                                            ,
+                                        ,
                                         "balloonContentFooter": 'FOOTER',
                                         "clusterCaption": _sz.sportzone_name, //подпись и слева и справа
                                         "hintContent": _sz.sportzone_name
@@ -659,8 +689,8 @@ export default {
         createTurfMerkatorEllipsePolygon(geometry) {
             //из-за того, что turf не учитывает преобразование Меркатора, рисуем эллипс с этим учетом
             let _merkator = turf.ellipse(geometry.coordinates,
-                geometry.radius*Math.cos(geometry.coordinates[0]*Math.PI/180)*0.85*1.65, //верхний радиус
-                geometry.radius*1.77,
+                geometry.radius * Math.cos(geometry.coordinates[0] * Math.PI / 180) * 0.85 * 1.65, //верхний радиус
+                geometry.radius * 1.77,
                 {units: 'meters', steps: 72,}
             );
             //из-за того, что turf работает только с полигонами, преобразуем эллипс в полигон
@@ -668,41 +698,40 @@ export default {
             return _merkator;
         },
 
-        paintIntersectionsOnOverlay (intersectionsPool, manager){
+        paintIntersectionsOnOverlay(intersectionsPool, manager) {
             intersectionsPool.map(inter => {
                 //поскольку здесь могут быть объекты, созданные по-разному, необходимо использовать такое получение координат
                 let _coords = inter.geometry ? inter.geometry.coordinates : JSON.parse(inter.polygon_json);
                 let _tomap = new ymaps.Polygon(_coords,
-                {
-                    hintContent: "Выбрать пересечение",
-                    balloonContent: "Пересечение",
-                    source: inter.geometry ? 'map' : 'db',
-                    population: inter.population,
-                    sportzones_inside: inter.sportzones_count,
-                    total_square: inter.area,
-                    sportzones_by_sports: inter.type_sports,
-                    sportzones_by_types: inter.type_sportzones,
-                    sports: '',
-                    sportzone_types: '',
-                    id: inter.geometry ? 'intersection_' + Date.now() : inter.id,
-                    is_choosed: false
-                },
-                {
-                    zIndex: 9000,
-                    opacity: 0.5,
-                    fillColor: '#3ac255',
-                    strokeColor: '#000000',
-                });
+                    {
+                        hintContent: "Выбрать пересечение",
+                        balloonContent: "Пересечение",
+                        source: inter.geometry ? 'map' : 'db',
+                        population: inter.population,
+                        sportzones_inside: inter.sportzones_count,
+                        total_square: inter.area,
+                        sportzones_by_sports: inter.type_sports,
+                        sportzones_by_types: inter.type_sportzones,
+                        sports: '',
+                        sportzone_types: '',
+                        id: inter.geometry ? 'intersection_' + Date.now() : inter.id,
+                        is_choosed: false
+                    },
+                    {
+                        zIndex: 9000,
+                        opacity: 0.5,
+                        fillColor: '#3ac255',
+                        strokeColor: '#000000',
+                    });
                 _tomap.events.add('click', e => {
                     e.preventDefault();
                     let _me = e.get('target');
                     //если уже выбрано - убираем из пула
-                    if(_me.properties.get('is_choosed')){
+                    if (_me.properties.get('is_choosed')) {
                         this.choosedIntersections.splice(this.choosedIntersections.indexOf(_me), 1);
                         _me.properties.set('is_choosed', false);
                         _me.options.set('fillColor', '#3ac255');
-                    }
-                    else{
+                    } else {
                         this.countSportzonesInside(_me);
                         this.choosedIntersections.push(_me);
                         _me.properties.set('is_choosed', true);
@@ -723,13 +752,13 @@ export default {
         },
 
         //ВЫВОД ПЕРЕСЕЧЕНИЙ
-        paintIntersections(){
+        paintIntersections() {
             this.intersectionsPool = [];
             this.intersectionsManager.removeAll();
-            if (this.doShowIntersections && this.currentRegion > 0){
+            if (this.doShowIntersections && this.currentRegion > 0) {
                 //выбираем оттуда все объекты района
-                for (var i = 0, len = this.objectsOverlay.objects.getAll().length; i < len-1; i++){
-                    for (var j = i+1; j < len; j++){
+                for (var i = 0, len = this.objectsOverlay.objects.getAll().length; i < len - 1; i++) {
+                    for (var j = i + 1; j < len; j++) {
                         let first_obj = this.objectsOverlay.objects.getAll()[i];
                         let second_obj = this.objectsOverlay.objects.getAll()[j];
                         let _firstPoly = this.createTurfMerkatorEllipsePolygon(first_obj.geometry);
@@ -740,17 +769,16 @@ export default {
                     }
                 }
                 this.paintIntersectionsOnOverlay(this.intersectionsPool, this.intersectionsManager);
-            }
-            else {
+            } else {
                 this.choosedIntersections = this.choosedIntersections.filter(inter => inter.properties.get('source') != 'map');
             }
         },
 
         //ПОДСЧЕТ МЕТРИКИ ПЕРЕСЕЧЕНИЯ
-        countSportzonesInside (geoobject){
+        countSportzonesInside(geoobject) {
             let _count = 0, _totalSquare = 0, _sports = [], _sztypes = [], _customHTML = '', _population = 0, _sportzones_by_types = {}, _sportzones_by_sports = {};
             //здесь рисуются объекты с базы и с карты, объекты в базе уже просчитаны
-            if (geoobject.properties.get('source') != 'db'){
+            if (geoobject.properties.get('source') != 'db') {
                 console.log('its geom');
                 //считаем, сколько объектов входит в пересечение
                 this.filteredSportObjects.map(el => {
@@ -758,10 +786,10 @@ export default {
                     //фильтруем по тем, которые входят в выбранное пересечение
                     if (geoobject.geometry.contains(coordinates))
                         el.params.map(_sz => {
-                            if (_sz){
+                            if (_sz) {
                                 let _szcoordinates = _sz.sportzone_coordinates.replace(/^\(|\)$/g, '').split(',');
-                                if (geoobject.geometry.contains(_szcoordinates)){
-                                    _count ++;
+                                if (geoobject.geometry.contains(_szcoordinates)) {
+                                    _count++;
                                     _totalSquare += _sz.sportzone_square;
                                     _sports.push(_sz.sport);
                                     _sztypes.push(_sz.sportzone_type_name);
@@ -783,13 +811,12 @@ export default {
                 for (var i = 0; i < pool.length; i++) {
                     if (pool[i] && pool[i].coordinates && pool[i].count_persons) {
                         let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
-                        if (geoobject.geometry.contains(coord)){
+                        if (geoobject.geometry.contains(coord)) {
                             _population += Math.floor(pool[i].count_persons);
                         }
                     }
                 }
-            }
-            else{ //Объекты из базы данных
+            } else { //Объекты из базы данных
                 _count = geoobject.properties.get('sportzones_inside');
                 _totalSquare = geoobject.properties.get('total_square');
                 _sportzones_by_types = JSON.parse(geoobject.properties.get('sportzones_by_types'));
@@ -802,20 +829,20 @@ export default {
                 geoobject.properties.set('sportzone_types', [...new Set(_sztypes)].join('; '));
             }
             _customHTML = `<p>Количество спортзон: ${_count}</p>`
-                + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare??0)}</p>`
+                + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare ?? 0)}</p>`
                 + `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`
                 + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
                 + `<p>Численность населения: ${Math.floor(_population)} чел.</p>`
             ;
 
             _customHTML += 'По типам спортзон:<br/><table><tr><th>Тип</th><th>Количество</th></tr>';
-            for(var i in _sportzones_by_types){
+            for (var i in _sportzones_by_types) {
                 _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_types[i]}</td></tr>`
             }
             _customHTML += '</table>';
 
             _customHTML += '<br/>По видам спорта:<br/><table><tr><th>Вид спорта</th><th>Количество</th></tr>';
-            for(var i in _sportzones_by_sports){
+            for (var i in _sportzones_by_sports) {
                 _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_sports[i]}</td></tr>`
             }
             _customHTML += '</table>';
@@ -823,10 +850,10 @@ export default {
             geoobject.properties.set('customHTML', _customHTML);
         },
 
-        paintEmptySpaces(){
+        paintEmptySpaces() {
             this.emptySpacesManager.removeAll();
             this.emptyRegion = null;
-            if (this.doShowEmptySpaces && this.currentRegion > 0){
+            if (this.doShowEmptySpaces && this.currentRegion > 0) {
                 //копируем текущий район
                 this.emptyRegion = {...this.currentRegionGeometry};
                 let _diff = turf.polygon(this.emptyRegion.geometry.getCoordinates());
@@ -837,15 +864,14 @@ export default {
                     _diff = difference;
                 });
                 //если вдруг район разбился кругами на несколько, то обходим как мультиполигон
-                if (_diff.geometry.type == "MultiPolygon"){
+                if (_diff.geometry.type == "MultiPolygon") {
                     _diff.geometry.coordinates.map(coords => {
                         let _localpoly = new ymaps.Polygon(coords, null, {
                             fillColor: '#00000080'
                         });
                         this.emptySpacesManager.add(_localpoly);
                     });
-                }
-                else{
+                } else {
                     _diff = new ymaps.Polygon(_diff.geometry.coordinates, null, {
                         fillColor: '#00000080'
                     });
@@ -854,31 +880,22 @@ export default {
             }
         },
         // ховер по объекту
-        mouseOverObject(e){
+        mouseOverObject(e) {
             //todo hover только для кругов?
             var objectId = e.get('objectId'),
                 objectGeometry = this.objectsManager.objects.getById(objectId).geometry.type;
-                if (e.get('type') === 'mouseenter') {
-                    this.objectsManager.objects.setObjectOptions(objectId, {
-                        fillColor: '#00000080'
-                    });
-                } else {
-                    this.objectsManager.objects.setObjectOptions(objectId, {
-                        fillColor: '#ffffff00'
-                    });
-                }
+            if (e.get('type') === 'mouseenter') {
+                this.objectsManager.objects.setObjectOptions(objectId, {
+                    fillColor: '#00000080'
+                });
+            } else {
+                this.objectsManager.objects.setObjectOptions(objectId, {
+                    fillColor: '#ffffff00'
+                });
+            }
         },
 
-        filterBySports(objects){
-            return objects.filter(sport_object => {
-                let el_find = false;
-                sport_object.params.forEach(param => {
-                    if (param && this.selected_types_of_sports.includes(param.sport)) el_find = true;
-                });
-                return el_find;
-            });
-        },
-        mapSetCurrentRegion(region){
+        mapSetCurrentRegion(region) {
             if (region.properties.get('osm_id') == this.currentRegion)
                 return;
             this.darkAllRegions();
@@ -894,11 +911,11 @@ export default {
             this.paintIntersections();
             this.paintSportZones();
         },
-        mapSetBounds(geoObject){
+        mapSetBounds(geoObject) {
             this.myMap.setBounds(geoObject.geometry.getBounds());
         },
         //пересоздаёт OM объектов
-        flushMainOverlay(){
+        flushMainOverlay() {
             this.myMap.geoObjects.remove(this.objectsManager);
             this.objectsOverlay = null;
             this.paintObjects();
@@ -911,17 +928,18 @@ export default {
             this.loaded = 0;
             // Порционная отрисовка объектов
             let _objectsinsideRegion = 0;
-            for (var i = 0, count_per_step = this.doPaintCircles? 100 : 1000, len = this.filteredSportObjects.length; i < len; i += count_per_step) {
-                let data = []; let processed = 0;
+            for (var i = 0, count_per_step = this.doPaintCircles ? 100 : 1000, len = this.filteredSportObjects.length; i < len; i += count_per_step) {
+                let data = [];
+                let processed = 0;
                 this.filteredSportObjects.slice(i, i + count_per_step).map(el => {
-                    processed ++;
-                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '', _sportsHTML = '';
+                    processed++;
+                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '',
+                        _sportsHTML = '';
                     //фильтруем по тем, которые входят в выбранный регион
-                    if (this.currentRegionGeometry.geometry.contains(coordinates))
-                    {
+                    if (this.currentRegionGeometry.geometry.contains(coordinates)) {
                         this.currentRegionGeometry.properties.set('sport_objects_inside', ++_objectsinsideRegion);
                         el.params.map(_sz => {
-                            if (_sz){
+                            if (_sz) {
                                 _szones.push(_sz.sportzone_type_name);
                                 _squares.push(_sz.sportzone_square);
                                 _sports.push(_sz.sport);
@@ -934,18 +952,18 @@ export default {
 
                         //суммарная площадь входящих спортплощадок и цвет окружности
                         // object_total_square in [0; 5kk]
-                        el.squareColor =  `rgba(${255*(this.squareNormal - el.object_total_square)/this.squareNormal}, ${el.object_total_square > this.squareNormal ? 255 : 255*(0 + el.object_total_square) / this.squareNormal}, 0, 1)`;
+                        el.squareColor = `rgba(${255 * (this.squareNormal - el.object_total_square) / this.squareNormal}, ${el.object_total_square > this.squareNormal ? 255 : 255 * (0 + el.object_total_square) / this.squareNormal}, 0, 1)`;
 
-                        if (_szones.length > 0){
+                        if (_szones.length > 0) {
                             _szonesHTML += '<label>Состав:</label>';
                             _szonesHTML += '<ul>';
                             _szones.map((e, i) => {
-                                _szonesHTML += `<li>${e} (${_squares[i]??0} кв.м.)</li>`;
+                                _szonesHTML += `<li>${e} (${_squares[i] ?? 0} кв.м.)</li>`;
                             });
                             _szonesHTML += '</ul>'
                         }
 
-                        if (_sports.length > 0){
+                        if (_sports.length > 0) {
                             _sportsHTML += '<label>Виды спорта:</label>';
                             _sportsHTML += '<ul>';
                             _sports.map(e => {
@@ -1009,7 +1027,7 @@ export default {
                                     "name": feature.properties.NAME,
                                     "hintContent": "Выбрать: " + feature.properties.NAME,
                                     "osm_id": feature.properties.OSM_ID,
-                                    "sport_objects_inside" : 0,
+                                    "sport_objects_inside": 0,
                                     "population": feature.properties.count_persons,
                                     "square": feature.properties.area + ' кв.км',
                                     "population_density": Math.floor(feature.properties.count_persons / feature.properties.area) + ' на кв.км.',
@@ -1108,7 +1126,7 @@ export default {
         filteredSportObjects(v) {
             this.total = v.length ?? 0;
             this.objectsManager.removeAll();
-            if (this.currentRegion > 0){
+            if (this.currentRegion > 0) {
                 this.paintObjects();
                 this.paintSportHeatmap(); //перерисовка хитмапа объектов
             }
