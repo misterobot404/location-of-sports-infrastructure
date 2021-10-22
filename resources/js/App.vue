@@ -24,6 +24,9 @@ export default {
 .v-application {
     font-family: Nunito, sans-serif !important;
 }
+.v-btn {
+    text-transform: none !important;
+}
 html {
     overflow-y: auto !important;
 }
