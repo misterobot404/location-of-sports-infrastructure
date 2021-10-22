@@ -276,6 +276,11 @@ export default {
             deleteInteraction: 'intersections/deleteObject',
         }),
 
+        chooseSportObjectById (id){
+            let _obj = this.objectsManager.objects.getById(id);
+            if (_obj) this.objectsManager.objects.balloon.open(id);
+        },
+
         chooseRegionById (osm_id){
             this.regionsManager.each(rg => {
                 if (rg.properties.get('osm_id') == osm_id)
@@ -693,8 +698,9 @@ export default {
                                 radius: el.accessibility_radius,
                             },
                             properties: {
+                                id: el.object_id,
                                 "balloonContent": "balloonContent",
-                                "balloonContentHeader": el.object_name,
+                                "balloonContentHeader": el.object_name + el.object_id,
                                 "balloonContentBody":
                                     '<p>Доступность: ' + el.accessibility_name + '</p>'
                                     + _szonesHTML
