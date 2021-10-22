@@ -210,6 +210,7 @@
                         <v-col cols="6" class="py-2">
                             <v-checkbox
                                 v-model="doShowIntersections"
+                                @change="paintIntersections"
                                 label="Пересечения"
                                 hide-details
                             />
@@ -851,6 +852,49 @@ export default {
             deleteInteraction: 'intersections/deleteObject',
         }),
 
+        // Фильтры
+        // По виду спорта
+        filterBySports(objects) {
+            return objects.filter(sport_object => {
+                let el_find = false;
+                sport_object.params.forEach(param => {
+                    if (param && this.selected_types_of_sports.includes(param.sport)) el_find = true;
+                });
+                return el_find;
+            });
+        },
+        // По региону
+        filterByRegion(objects) {
+            return objects.filter(el => {
+                let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(','), _szones = [], _sports = [], _squares = [], _szonesHTML = '',
+                    _sportsHTML = '';
+                //фильтруем по тем, которые входят в выбранный регион
+                return this.currentRegionGeometry.geometry.contains(coordinates);
+            })
+        },
+        // По ведомству
+        filterByOrganisations(objects) {
+            return objects.filter(sport_object => {
+                return this.selected_organisations.includes(sport_object.organisation_name)
+            });
+        },
+        // По виду спорт. площадки
+        filterByTypesOfSportsZones(objects) {
+            return objects.filter(sport_object => {
+                let el_find = false;
+                sport_object.params.forEach(param => {
+                    if (param && this.selected_types_of_sports_zones.includes(param.sportzone_type_name)) el_find = true;
+                });
+                return el_find;
+            });
+        },
+        // По доступности
+        filterByAccessibility(objects) {
+            return objects.filter(sport_object => {
+                return this.selected_accessibility === sport_object.accessibility_name
+            });
+        },
+
         AgregateExportHTML (){
              //собираемая информация
             let _html = '';
@@ -1464,6 +1508,14 @@ export default {
         },
     },
     watch: {
+        doShowEmptySpaces() {
+            this.paintEmptySpaces();
+        },
+
+        doPaintSportZones() {
+            this.doPaintSportZones();
+        },
+
         // Перерисовка объектов на карте
         filteredSportObjects(v) {
             this.total = v.length ?? 0;
