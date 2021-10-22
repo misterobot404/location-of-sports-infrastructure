@@ -385,7 +385,7 @@
                             </v-row>
                             <v-divider class="mt-6"/>
                             <!-- Пересечения -->
-                            <template v-if="doShowIntersections">
+                            <template v-if="doShowIntersections || doShowSavedIntersections">
                                 <v-card class="mt-4 pa-4 d-flex flex-column">
                                     <h4 class="align-self-center mt-2">Пересечения</h4>
                                     <v-expansion-panels class="mt-2">
