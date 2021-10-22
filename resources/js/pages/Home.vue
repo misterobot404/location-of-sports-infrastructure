@@ -382,6 +382,13 @@
                                         hide-details
                                     />
                                 </v-col>
+                                <v-col cols="12" class="py-2">
+                                    <v-checkbox
+                                        v-model="calculateOnHundred"
+                                        :label="'Расчёт на 100.000 человек'"
+                                        hide-details
+                                    />
+                                </v-col>
                             </v-row>
                             <v-divider class="mt-6"/>
                             <!--  Нормаль площади -->
@@ -708,6 +715,8 @@ export default {
 
             doPaintSportZones: false, //выводить ли спортзоны объектов
             sportZonesOverlay: null, //оверлей спортзон
+
+            calculateOnHundred: true, //расчёт аналитики на 100.000 человек
         }
     },
     computed: {
@@ -1163,9 +1172,9 @@ export default {
                 geoobject.properties.set('sportzone_types', [...new Set(_sztypes)].join('; '));
             }
             _customHTML = `<p>Количество спортзон: ${_count}</p>`
-                + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare ?? 0)}</p>`
                 + `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`
                 + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
+                + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare ?? 0)}</p>`
                 + `<p>Численность населения: ${Math.floor(_population)} чел.</p>`
             ;
 
@@ -1178,6 +1187,22 @@ export default {
             _customHTML += '<br/>По видам спорта:<br/><table><tr><th>Вид спорта</th><th>Количество</th></tr>';
             for (var i in _sportzones_by_sports) {
                 _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_sports[i]}</td></tr>`
+            }
+            _customHTML += '</table>';
+
+            _customHTML += `<h3>Расчёт (на ${this.calculateOnHundred ? 100000 : 1} чел.)</h3>`;
+            _customHTML += `<p>Спортзон: ${((_count ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)} ед.</p>`;
+            _customHTML += `<p>Площадь: ${((_totalSquare ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)} кв.м.</p>`;
+
+            _customHTML += `По типам спортзон:<br/><table><tr><th>Тип</th><th>Количество</th></tr>`;
+            for (var i in _sportzones_by_types) {
+                _customHTML += `<tr><td>${i}</td><td>${((_sportzones_by_types[i] ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)}</td></tr>`
+            }
+            _customHTML += '</table>';
+
+            _customHTML += `<br/>По видам спорта:<br/><table><tr><th>Вид спорта</th><th>Количество</th></tr>`;
+            for (var i in _sportzones_by_sports) {
+                _customHTML += `<tr><td>${i}</td><td>${((_sportzones_by_sports[i] ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)}</td></tr>`
             }
             _customHTML += '</table>';
 
