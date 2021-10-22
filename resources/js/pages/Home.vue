@@ -210,7 +210,7 @@
                         <v-col cols="6" class="py-2">
                             <v-checkbox
                                 v-model="doShowIntersections"
-                                label="Пересечения"
+                                :label="'Пересечения (' + intersectionsPool.length + ')'"
                                 hide-details
                             />
                         </v-col>
@@ -259,7 +259,7 @@
         <!-- Page -->
         <section style="height: 100vh;" class="d-flex flex-column-reverse flex-md-row overflow-hidden">
             <!-- Left/Bot Col -->
-            <v-col cols="6" class="d-flex flex-column flex-md-row overflow-hidden" style="max-width: 100%">
+            <v-col cols="5" class="d-flex flex-column flex-md-row overflow-hidden" style="max-width: 100%">
                 <!-- Desktop -->
                 <template v-if="$vuetify.breakpoint.mdAndUp">
                     <!-- Регионы -->
@@ -370,7 +370,7 @@
                                 <v-col cols="6" class="py-2">
                                     <v-checkbox
                                         v-model="doShowIntersections"
-                                        label="Пересечения"
+                                        :label="'Пересечения (' + intersectionsPool.length + ')'"
                                         hide-details
                                     />
                                 </v-col>
@@ -384,31 +384,6 @@
                                 </v-col>
                             </v-row>
                             <v-divider class="mt-6"/>
-                            <!-- Пересечения -->
-                            <template v-if="doShowIntersections || doShowSavedIntersections">
-                                <v-card class="mt-4 pa-4 d-flex flex-column">
-                                    <h4 class="align-self-center mt-2">Пересечения</h4>
-                                    <v-expansion-panels class="mt-2">
-                                        <v-expansion-panel v-for="(intersect, i) in choosedIntersections" :key="i">
-                                            <v-expansion-panel-header>
-                                                Пересечение {{ i + 1 }}
-                                            </v-expansion-panel-header>
-                                            <v-expansion-panel-content>
-                                                <button @click="removeIntersection(intersect)" style="float:right">Удалить</button>
-                                                <div v-html="intersect.properties.get('customHTML')"></div>
-                                            </v-expansion-panel-content>
-                                        </v-expansion-panel>
-                                    </v-expansion-panels>
-                                    <div class="d-flex justify-space-between mt-4">
-                                        <v-btn @click="clearChoosedIntersections">
-                                            <v-icon class="mr-1" small>close</v-icon>
-                                            Очистить
-                                        </v-btn>
-                                        <v-btn @click="saveIntersections">Сохранить</v-btn>
-                                    </div>
-                                </v-card>
-                                <v-divider class="mt-4"/>
-                            </template>
                             <!--  Нормаль площади -->
                             <label class="mt-4 align-self-center">Нормаль площади</label>
                             <v-text-field
@@ -553,19 +528,53 @@
                             </v-btn>
                         </v-card>
                         <v-divider class="my-4"/>
+                        <!-- Пересечения -->
+                            <template v-if="doShowIntersections || doShowSavedIntersections">
+                                <v-card class="mt-4 pa-4 d-flex flex-column">
+                                    <h4 class="align-self-center mt-2">Пересечения</h4>
+                                    <v-expansion-panels class="mt-2">
+                                        <v-expansion-panel v-for="(intersect, i) in choosedIntersections" :key="i">
+                                            <v-expansion-panel-header>
+                                                Пересечение {{ i + 1 }}
+                                            </v-expansion-panel-header>
+                                            <v-expansion-panel-content>
+                                                <button @click="removeIntersection(intersect)" style="float:right">Удалить</button>
+                                                <div v-html="intersect.properties.get('customHTML')"></div>
+                                            </v-expansion-panel-content>
+                                        </v-expansion-panel>
+                                    </v-expansion-panels>
+                                    <div class="d-flex justify-space-between mt-4">
+                                        <v-btn @click="clearChoosedIntersections">
+                                            <v-icon class="mr-1" small>close</v-icon>
+                                            Очистить
+                                        </v-btn>
+                                        <v-btn @click="saveIntersections">Сохранить</v-btn>
+                                    </div>
+                                </v-card>
+                                <v-divider class="mt-4"/>
+                            </template>
                         <!-- Cпортивные события -->
                         <template v-if="currentRegion">
                             <div class="flex d-flex flex-column">
-                                <v-card
-                                    v-for="(sport_object) in filteredSportObjects.filter(el => search_sport_object ? el.object_name.toLowerCase().indexOf(search_sport_object.toLowerCase()) !== -1 : true)"
-                                    @click="chooseSportObjectById(sport_object.object_id)"
-                                    class="overflow-hidden pa-3 my-1"
-                                    :class="[selected_sport_object_id === sport_object.object_id ? 'primary--text' : null]"
-                                    style="cursor: pointer"
-                                    :key="sport_object.object_id"
-                                >
-                                    <label style="cursor: pointer">{{ sport_object.object_name }}</label>
-                                </v-card>
+                                <v-expansion-panels class="mt-2">
+                                    <v-expansion-panel>
+                                        <v-expansion-panel-header>
+                                            Спортивные объекты
+                                        </v-expansion-panel-header>
+                                        <v-expansion-panel-content v-for="(sport_object) in filteredSportObjects.filter(el => search_sport_object ? el.object_name.toLowerCase().indexOf(search_sport_object.toLowerCase()) !== -1 : true)"
+                                            :key="sport_object.object_id"
+                                            >
+                                            <v-card
+                                                @click="chooseSportObjectById(sport_object.object_id)"
+                                                class="overflow-hidden pa-3 my-1"
+                                                :class="[selected_sport_object_id === sport_object.object_id ? 'primary--text' : null]"
+                                                style="cursor: pointer"
+                                            >
+                                                <label style="cursor: pointer">{{ sport_object.object_name }}</label>
+                                            </v-card>
+                                        </v-expansion-panel-content>
+                                    </v-expansion-panel>
+                                </v-expansion-panels>
                             </div>
                         </template>
                         <template v-else>
@@ -612,7 +621,7 @@
                 </template>
             </v-col>
             <!-- Right/Top Col -->
-            <v-col cols="6" class="pa-0" style="max-width: 100%;" id="map"/>
+            <v-col cols="7" class="pa-0" style="max-width: 100%;" id="map"/>
         </section>
     </v-container>
 </template>
