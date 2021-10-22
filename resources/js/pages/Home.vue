@@ -276,6 +276,31 @@ export default {
             deleteInteraction: 'intersections/deleteObject',
         }),
 
+        AgregateExportHTML (){
+             //собираемая информация
+            let _html = '';
+            //фотка карты
+            //_html += '<img width="450" height="450" src="https://static-maps.yandex.ru/1.x/?lang=en-US&ll=37.64,55.76&size=450,450&z=10&l=map"/>';
+            //выбранный регион
+            _html += '<h2>Выбранный регион</h2>';
+            _html += this.currentRegionInfo;
+            //выбранные пересечения
+            this.choosedIntersections.map(intersect => {
+                _html += '<h2>Пересечение</h2>';
+                _html += intersect.properties.get('customHTML');
+            });
+            return _html;
+        },
+
+        ExportToExcel(){
+            window.open('data:application/vnd.ms-excel,' + encodeURIComponent(this.AgregateExportHTML()));
+        },
+
+        ExportToPDF (){
+            let _html = this.AgregateExportHTML();
+            html2pdf(_html);
+        },
+
         chooseSportObjectById (id){
             let _obj = this.objectsManager.objects.getById(id);
             if (_obj) this.objectsManager.objects.balloon.open(id);
