@@ -1508,6 +1508,7 @@ export default {
         },
 
         doShowIntersections () {
+            this.doPaintSportZones = true;
             this.paintIntersections();
         },
 
