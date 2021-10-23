@@ -546,7 +546,7 @@
                                                 Пересечение {{ i + 1 }}
                                             </v-expansion-panel-header>
                                             <v-expansion-panel-content>
-                                                <button @click="removeIntersection(intersect)" style="float:right">Удалить</button>
+                                                <button @click="deleteSavedIntersections(intersect)" style="float:right">Удалить</button>
                                                 <div v-html="intersect.properties.get('customHTML')"></div>
                                             </v-expansion-panel-content>
                                         </v-expansion-panel>
@@ -931,11 +931,26 @@ export default {
             });
         },
 
-        removeIntersection(intersect) { //удаление пересечения
-            let _id = intersect.properties.get('id');
-            this.choosedIntersections.splice(this.choosedIntersections.indexOf(intersect), 1);
+        createTurfMerkatorEllipsePolygon(geometry) { //преобразует ymaps circle в turf polygon через преобразование Меркатора
+            let _merkator = turf.ellipse(geometry.coordinates,
+                geometry.radius * Math.cos(geometry.coordinates[0] * Math.PI / 180) * 0.85 * 1.65, //верхний радиус
+                geometry.radius * 1.77,
+                {units: 'meters', steps: 72,}
+            );
+            //из-за того, что turf работает только с полигонами, преобразуем эллипс в полигон
+            _merkator = turf.polygon(_merkator.geometry.coordinates);
+            return _merkator;
+        },
+
+        removeIntersection(intersect) { //убираем пересечения из пула
             intersect.properties.set('is_choosed', false);
             intersect.options.set('fillColor', this.INTERSECTION_DEFAULT_COLOR);
+            this.choosedIntersections = this.choosedIntersections.filter(inter => inter != intersect);
+        },
+
+        deleteSavedIntersections(intersect) { //удаление пересечения
+            this.removeIntersection(intersect);
+            let _id = intersect.properties.get('id');
             if (typeof (_id) == 'number') { //объект из базы
                 this.deleteIntersection(_id);
                 this.savedIntersManager.remove(intersect);
@@ -943,10 +958,9 @@ export default {
         },
 
         clearChoosedIntersections() { //очистка пула выбранных пересечений
-            this.choosedIntersections.map(intersect => {
+            this.choosedIntersections.forEach(intersect => {
                 this.removeIntersection(intersect);
-            })
-            this.choosedIntersections = [];
+            });
         },
 
         saveIntersections() { //каскадно сохраняет выбранные пересечения
@@ -972,17 +986,6 @@ export default {
                 };
                 this.storeIntersection(_params);
             });
-        },
-
-        createTurfMerkatorEllipsePolygon(geometry) { //преобразует ymaps circle в turf polygon через преобразование Меркатора
-            let _merkator = turf.ellipse(geometry.coordinates,
-                geometry.radius * Math.cos(geometry.coordinates[0] * Math.PI / 180) * 0.85 * 1.65, //верхний радиус
-                geometry.radius * 1.77,
-                {units: 'meters', steps: 72,}
-            );
-            //из-за того, что turf работает только с полигонами, преобразуем эллипс в полигон
-            _merkator = turf.polygon(_merkator.geometry.coordinates);
-            return _merkator;
         },
 
         countSportzonesInside(geoobject) { //ПОДСЧЕТ МЕТРИКИ ПЕРЕСЕЧЕНИЯ
@@ -1024,8 +1027,8 @@ export default {
                 }
                 geoobject.properties.set('sportzones_inside', _count);
                 geoobject.properties.set('total_square', _totalSquare);
-                geoobject.properties.set('sportzones_by_types', JSON.stringify(_sportzones_by_types));
-                geoobject.properties.set('sportzones_by_sports', JSON.stringify(_sportzones_by_sports));
+                geoobject.properties.set('sportzones_by_types', _sportzones_by_types);
+                geoobject.properties.set('sportzones_by_sports', _sportzones_by_sports);
                 geoobject.properties.set('population', _population);
             } else { //Объекты из базы данных
                 _count = geoobject.properties.get('sportzones_inside');
@@ -1117,7 +1120,7 @@ export default {
             this.paintObjects();
         },
 
-        agregateExportHTML() { //формирует html для эксперта
+        agregateExportHTML() { //формирует html для экспорта
             let _html = '';
             //выбранный регион
             _html += '<h2>Выбранный регион</h2>';
