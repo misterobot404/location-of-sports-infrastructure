@@ -586,7 +586,7 @@
                             </div>
                         </template>
                         <template v-else>
-                            <div class="flex d-flex justify-center align-center mt-4">
+                            <div class="flex d-flex justify-center align-center mt-1">
                                 <v-icon class="mr-2">highlight_alt</v-icon>
                                 <label>Выберите округ</label>
                             </div>
