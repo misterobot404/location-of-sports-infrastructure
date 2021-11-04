@@ -1045,7 +1045,7 @@ export default {
             _customHTML = `<p>Количество спортзон: ${_count}</p>`
                 + `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`
                 + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
-                + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare ?? 0)}</p>`
+                + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare ?? 0)} кв.м.</p>`
                 + `<p>Численность населения: ${Math.floor(_population)} чел.</p>`
             ;
 
@@ -1076,7 +1076,7 @@ export default {
                 _customHTML += `<tr><td>${i}</td><td>${((_sportzones_by_sports[i] ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)}</td></tr>`
             }
             _customHTML += '</table>';
-
+            geoobject.properties.set('balloonContentBody', _customHTML);
             geoobject.properties.set('customHTML', _customHTML);
         },
 
@@ -1156,6 +1156,27 @@ export default {
             this.search_sportzone_name = "";
         },
 
+        //считаем информацию по пустой зоне
+        countInfoForEmptySpace(space){
+            let _customHTML = '', _population = 0;
+            //считаем население, входящее в пересечение
+            let pool = population_heatmaps['RECORDS'];
+            for (var i = 0; i < pool.length; i++) {
+                if (pool[i] && pool[i].coordinates && pool[i].count_persons) {
+                    let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
+                    if (space.geometry.contains(coord)) {
+                        _population += Math.floor(pool[i].count_persons);
+                    }
+                }
+            }
+            _customHTML += `<p>Количество проживающих: ${_population} чел.</p>`;
+            // анализируем площадь
+            let _area = space.properties.get('_totalArea');
+            _area = _area > 1000000 ? (_area / 1000000).toFixed(4) + ' кв.км.' : _area + ' кв.м.';
+            _customHTML += `<p>Площадь зоны: ${_area}</p>`;
+            space.properties.set('balloonContentBody', _customHTML);
+        },
+
         /*-----------------------------------------------
                         Р И С О В А Н И Е
         -----------------------------------------------*/
@@ -1166,7 +1187,10 @@ export default {
                 let _tomap = new ymaps.Polygon(_coords,
                     {
                         hintContent: "Выбрать пересечение",
-                        balloonContent: "Пересечение",
+                        "balloonContent": "balloonContent",
+                        "balloonContentHeader": 'Пересечение',
+                        "balloonContentBody": `Body`,
+                        "balloonContentFooter": ``,
                         source: inter.geometry ? 'map' : 'db',
                         population: inter.population,
                         sportzones_inside: inter.sportzones_count,
@@ -1185,7 +1209,6 @@ export default {
                         strokeColor: this.INTERSECTION_DEFAULT_STROKE_COLOR,
                     });
                 _tomap.events.add('click', e => {
-                    e.preventDefault();
                     let _me = e.get('target');
                     //если уже выбрано - убираем из пула
                     if (_me.properties.get('is_choosed')) {
@@ -1255,18 +1278,37 @@ export default {
                     let difference = turf.difference(_diff, _secondPoly);
                     _diff = difference;
                 });
+                //сразу считаем площадь области, чтоб потом не преобразовывать
+                let _area = Math.floor(turf.area(_diff));
+                let _options = {
+                    "balloonContent": "balloonContent",
+                    "balloonContentHeader": 'Пустая зона',
+                    "balloonContentFooter": ``,
+                    "hintContent": 'Выбрать область',
+                    _totalArea: _area,
+                };
                 //если вдруг район разбился кругами на несколько, то обходим как мультиполигон
                 if (_diff.geometry.type == "MultiPolygon") {
                     _diff.geometry.coordinates.forEach(coords => {
-                        let _localpoly = new ymaps.Polygon(coords, null, {
+                        let _localpoly = new ymaps.Polygon(coords, _options, {
                             fillColor: this.FILLED_REGION_COLOR
+                        });
+                        _localpoly.events.add('click', e => {
+                            let _me = e.get('target');
+                            this.countInfoForEmptySpace(_me);
+                            console.log(_me);
                         });
                         this.emptySpacesManager.add(_localpoly);
                     });
                 } else {
-                    _diff = new ymaps.Polygon(_diff.geometry.coordinates, null, {
+                    _diff = new ymaps.Polygon(_diff.geometry.coordinates, _options, {
                         fillColor: this.FILLED_REGION_COLOR
                     });
+                    _diff.events.add('click', e => {
+                            let _me = e.get('target');
+                            this.countInfoForEmptySpace(_me);
+                            console.log(_me);
+                        });
                     this.emptySpacesManager.add(_diff);
                 }
             }
