@@ -11,12 +11,11 @@ import accessibility from "./modules/accessibility";
 import organisations from "./modules/organisations";
 import types_of_sports_zones from "./modules/types_of_sports_zones";
 import intersections from "./modules/intersections";
+import layers from "./modules/local/layers";
+import filters from "./modules/local/filters";
 
 export default new Vuex.Store({
     strict: true,
-    state: {
-        currentRegion: 0
-    },
     modules: {
         sports,
         relations,
@@ -25,7 +24,9 @@ export default new Vuex.Store({
         organisations,
         types_of_sports_zones,
         auth,
-        intersections
+        intersections,
+        layers,
+        filters
     }
 })
 

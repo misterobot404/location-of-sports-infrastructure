@@ -1,5 +1,7 @@
-import Navbar from './UI/Navbar';
+import Layers from './Layers';
+import Filters from './Filters';
 
 export default [
-    Navbar
+    Layers,
+    Filters
 ]
