@@ -441,9 +441,12 @@ export default {
 
         filterByRegion(objects) { // По региону
             return objects.filter(el => {
+                return this.currentRegion == el.region_osm_id
+/* redundant
                 let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
                 //фильтруем по тем, которые входят в выбранный регион
                 return this.currentRegionGeometry.geometry.contains(coordinates);
+*/
             })
         },
 
