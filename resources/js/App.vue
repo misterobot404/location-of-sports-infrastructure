@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-app class="app">
     <v-main>
       <!-- Page -->
       <keep-alive>
@@ -22,6 +22,10 @@ export default {
 
 .v-btn {
   text-transform: none !important;
+}
+
+.v-list {
+  padding-top: 0 !important;
 }
 
 html {

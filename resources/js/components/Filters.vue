@@ -12,13 +12,15 @@
         hide-details
         clearable
         placeholder="Ведомство"
-        class="mt-2"
+        class="mt-2 pt-0__v-list"
     >
       <template v-slot:prepend-item>
-        <v-list-item>
-          <v-text-field v-model.lazy.trim="organisations_filter" prepend-icon="search" hide-details dense outlined placeholder="Поиск..."/>
-        </v-list-item>
-        <v-divider class="mt-2"/>
+        <div class="append">
+          <v-list-item>
+            <v-text-field v-model.lazy.trim="organisations_filter" prepend-icon="search" hide-details dense outlined placeholder="Поиск..."/>
+          </v-list-item>
+          <v-divider class="mt-2"/>
+        </div>
       </template>
       <template v-slot:selection="{ item, index }">
         <v-chip v-if="index < 2" class="my-1" style="white-space: normal; word-break: break-word">
@@ -50,11 +52,13 @@
             placeholder="Вид спорта"
         >
           <template v-slot:prepend-item>
-            <v-list-item>
-              <v-text-field v-model.lazy.trim="types_of_sports_filter" prepend-icon="search" hide-details dense outlined
-                            placeholder="Поиск..."/>
-            </v-list-item>
-            <v-divider class="mt-2"/>
+            <div class="append">
+              <v-list-item>
+                <v-text-field v-model.lazy.trim="types_of_sports_filter" prepend-icon="search" hide-details dense outlined
+                              placeholder="Поиск..."/>
+              </v-list-item>
+              <v-divider class="mt-2"/>
+            </div>
           </template>
           <template v-slot:selection="{ item, index }">
             <v-chip v-if="index < 2" class="my-1" style="white-space: normal; word-break: break-word">
@@ -85,11 +89,13 @@
             placeholder="Тип спорт.зоны"
         >
           <template v-slot:prepend-item>
-            <v-list-item>
-              <v-text-field v-model.lazy.trim="types_of_sports_zones_filter" prepend-icon="search" hide-details dense outlined
-                            placeholder="Поиск..."/>
-            </v-list-item>
-            <v-divider class="mt-2"/>
+            <div class="append">
+              <v-list-item>
+                <v-text-field v-model.lazy.trim="types_of_sports_zones_filter" prepend-icon="search" hide-details dense outlined
+                              placeholder="Поиск..."/>
+              </v-list-item>
+              <v-divider class="mt-2"/>
+            </div>
           </template>
           <template v-slot:selection="{ item, index }" style="white-space: normal;">
             <v-chip v-if="index < 2" class="my-1" style="white-space: normal; word-break: break-word">
@@ -215,5 +221,11 @@ export default {
 </script>
 
 <style scoped>
-
+.append {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding-top: 8px;
+  background: white;
+}
 </style>
