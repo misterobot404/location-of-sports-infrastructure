@@ -1,5 +1,5 @@
 <template>
-  <v-card class="d-flex flex-column pa-4">
+  <v-card class="d-flex flex-column pa-4" style="border: 1px rgba(0,0,0, 0.25) solid">
     <!--  Слои -->
     <h4 class="align-self-center mt-1">Слои карты</h4>
     <v-row class="overflow-x-auto">

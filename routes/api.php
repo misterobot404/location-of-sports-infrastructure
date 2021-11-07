@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Api\AccessibilityController;
 use App\Http\Controllers\Api\IntersectionController;
 use App\Http\Controllers\Api\OrganisationController;
-use App\Http\Controllers\Api\RelationController;
 use App\Http\Controllers\Api\SportController;
 use App\Http\Controllers\Api\SportObjectController;
 use App\Http\Controllers\Api\TypesOfSportsZonesController;
+use App\Http\Controllers\Api\AnalyticsController;
 use App\Models\TypeOfSportZone;
 use Illuminate\Support\Facades\Route;
 
@@ -34,3 +34,6 @@ Route::get('/types-of-sports-zones', [TypesOfSportsZonesController::class, 'inde
 
 // Доступность
 Route::get('/accessibility', [AccessibilityController::class, 'index']);
+
+// Аналитика по районам и видам спорта
+Route::get('/analytics', [AnalyticsController::class, 'index']);

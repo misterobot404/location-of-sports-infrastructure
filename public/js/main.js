@@ -2612,19 +2612,19 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "routes": () => (/* binding */ routes)
 /* harmony export */ });
-var routes = [//dont set <name> field to hide from header
-{
+var routes = [{
   path: '/',
   redirect: '/home'
 }, {
   path: '/home',
-  name: 'Home',
   component: function component() {
     return __webpack_require__.e(/*! import() */ "resources_js_pages_Home_vue").then(__webpack_require__.bind(__webpack_require__, /*! ../pages/Home */ "./resources/js/pages/Home.vue"));
-  },
-  meta: {
-    title: 'Go to main page' //set if u want to set title on nav element
-
+  }
+}, {
+  // Страница с аналитикой
+  path: '/analytics/:id?',
+  component: function component() {
+    return __webpack_require__.e(/*! import() */ "resources_js_pages_Analytics_vue").then(__webpack_require__.bind(__webpack_require__, /*! ../pages/Analytics */ "./resources/js/pages/Analytics.vue"));
   }
 }, {
   // Страница с информацией по объекту
@@ -3907,7 +3907,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_laravel_mix_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_0___default()(function(i){return i[1]});
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, "\n.v-application {\r\n  font-family: Nunito, sans-serif !important;\n}\n.v-btn {\r\n  text-transform: none !important;\n}\n.v-list {\r\n  padding-top: 0 !important;\n}\nhtml {\r\n  overflow-y: auto !important;\n}\r\n", ""]);
+___CSS_LOADER_EXPORT___.push([module.id, "\n.v-application {\n    font-family: Nunito, sans-serif !important;\n}\n.v-btn {\n    text-transform: none !important;\n    font-weight: 600 !important;\n}\n.v-list {\n    padding-top: 0 !important;\n}\nhtml {\n    overflow-y: auto !important;\n}\n\n/* Loader */\n.overlay {\n    text-align: center;\n    background-color: #ffffff !important;\n    color: #05051f !important;\n}\n.overlay circle {\n    transform-origin: center;\n    transform-box: fill-box;\n    transform-origin: center;\n    -webkit-animation: rotate linear infinite;\n            animation: rotate linear infinite;\n}\n.overlay circle:nth-child(1) {\n    -webkit-animation-duration: 1.6s;\n            animation-duration: 1.6s;\n}\n.overlay circle:nth-child(2) {\n    -webkit-animation-duration: 1.2s;\n            animation-duration: 1.2s;\n}\n.overlay circle:nth-child(3) {\n    -webkit-animation-duration: 0.8s;\n            animation-duration: 0.8s;\n}\n@-webkit-keyframes rotate {\n100% {\n        transform: rotate(360deg);\n}\n}\n@keyframes rotate {\n100% {\n        transform: rotate(360deg);\n}\n}\n.overlay svg {\n    width: 100px;\n    height: 100px;\n}\n\n", ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -3931,7 +3931,7 @@ __webpack_require__.r(__webpack_exports__);
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_laravel_mix_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_0___default()(function(i){return i[1]});
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, "\n.append[data-v-b9055040] {\r\n  position: -webkit-sticky;\r\n  position: sticky;\r\n  top: 0;\r\n  z-index: 3;\r\n  padding-top: 8px;\r\n  background: white;\n}\r\n", ""]);
+___CSS_LOADER_EXPORT___.push([module.id, "\n.append[data-v-b9055040] {\n  position: -webkit-sticky;\n  position: sticky;\n  top: 0;\n  z-index: 3;\n  padding-top: 8px;\n  background: white;\n}\n", ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -5650,7 +5650,10 @@ var render = function() {
   var _c = _vm._self._c || _h
   return _c(
     "v-card",
-    { staticClass: "pa-4 d-flex flex-column" },
+    {
+      staticClass: "pa-4 d-flex flex-column",
+      staticStyle: { border: "1px rgba(0,0,0, 0.25) solid" }
+    },
     [
       _c("h4", { staticClass: "align-self-center mt-1" }, [_vm._v("Фильтры")]),
       _vm._v(" "),
@@ -6113,7 +6116,10 @@ var render = function() {
   var _c = _vm._self._c || _h
   return _c(
     "v-card",
-    { staticClass: "d-flex flex-column pa-4" },
+    {
+      staticClass: "d-flex flex-column pa-4",
+      staticStyle: { border: "1px rgba(0,0,0, 0.25) solid" }
+    },
     [
       _c("h4", { staticClass: "align-self-center mt-1" }, [
         _vm._v("Слои карты")
@@ -35892,7 +35898,7 @@ module.exports = JSON.parse('{"name":"axios","version":"0.21.4","description":"P
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
@@ -35911,6 +35917,36 @@ module.exports = JSON.parse('{"name":"axios","version":"0.21.4","description":"P
 /******/ 				() => (module);
 /******/ 			__webpack_require__.d(getter, { a: getter });
 /******/ 			return getter;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/create fake namespace object */
+/******/ 	(() => {
+/******/ 		var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
+/******/ 		var leafPrototypes;
+/******/ 		// create a fake namespace object
+/******/ 		// mode & 1: value is a module id, require it
+/******/ 		// mode & 2: merge all properties of value into the ns
+/******/ 		// mode & 4: return value when already ns object
+/******/ 		// mode & 16: return value when it's Promise-like
+/******/ 		// mode & 8|1: behave like require
+/******/ 		__webpack_require__.t = function(value, mode) {
+/******/ 			if(mode & 1) value = this(value);
+/******/ 			if(mode & 8) return value;
+/******/ 			if(typeof value === 'object' && value) {
+/******/ 				if((mode & 4) && value.__esModule) return value;
+/******/ 				if((mode & 16) && typeof value.then === 'function') return value;
+/******/ 			}
+/******/ 			var ns = Object.create(null);
+/******/ 			__webpack_require__.r(ns);
+/******/ 			var def = {};
+/******/ 			leafPrototypes = leafPrototypes || [null, getProto({}), getProto([]), getProto(getProto)];
+/******/ 			for(var current = mode & 2 && value; typeof current == 'object' && !~leafPrototypes.indexOf(current); current = getProto(current)) {
+/******/ 				Object.getOwnPropertyNames(current).forEach((key) => (def[key] = () => (value[key])));
+/******/ 			}
+/******/ 			def['default'] = () => (value);
+/******/ 			__webpack_require__.d(ns, def);
+/******/ 			return ns;
 /******/ 		};
 /******/ 	})();
 /******/ 	
@@ -35944,7 +35980,8 @@ module.exports = JSON.parse('{"name":"axios","version":"0.21.4","description":"P
 /******/ 		// This function allow to reference async chunks
 /******/ 		__webpack_require__.u = (chunkId) => {
 /******/ 			// return url for filenames not based on template
-/******/ 			if ({"resources_js_pages_Home_vue":1,"resources_js_pages_ObjectInfo_vue":1,"resources_js_pages_page404_vue":1}[chunkId]) return "js/" + chunkId + ".js";
+/******/ 			if ({"resources_js_pages_Home_vue":1,"resources_js_pages_Analytics_vue":1,"resources_js_pages_ObjectInfo_vue":1,"resources_js_pages_page404_vue":1,"pdfmake":1,"canvg":1}[chunkId]) return "js/" + chunkId + ".js";
+/******/ 			if (chunkId === "xlsx") return "js/xlsx.js";
 /******/ 			// return url for filenames based on template
 /******/ 			return undefined;
 /******/ 		};

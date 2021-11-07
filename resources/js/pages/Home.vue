@@ -70,14 +70,18 @@
                         <v-card
                             v-for="(el) in getRegions.filter(el => search_region ? el.name.toLowerCase().indexOf(search_region.toLowerCase()) !== -1 : true)"
                             @click="el.valid ? chooseRegionById(el.osm_id) : null"
-                            @mouseenter="enlightRegionById(el.osm_id)"
-                            @mouseleave="darkAllRegions()"
+                            @mouseenter="enlightRegionById(el.osm_id);"
+                            @mouseleave="darkAllRegions();"
                             :key="el.osm_id"
                             min-height="100"
                             class="text-wrap my-3 pa-4"
                             :style="!el.valid ? 'opacity: 0.5' : null"
                             :class="[currentRegion === el.osm_id ? 'primary--text' : null]"
                         >
+                            <v-btn v-if="currentRegion === el.osm_id" :to="'/analytics/' + currentRegion" icon
+                                   style="position: absolute; top: 4px; right: 4px">
+                                <v-icon>analytics</v-icon>
+                            </v-btn>
                             <h4>{{ el.name }}</h4>
                             <v-card-subtitle v-show="currentRegion === el.osm_id" v-html="currentRegionInfo" class="mt-2 pa-0"/>
                         </v-card>
@@ -94,8 +98,11 @@
                                 outlined
                                 dense
                             />
-                            <v-btn @click="reports_dialog = true" class="ml-2" icon large>
-                                <v-icon>summarize</v-icon>
+                            <v-btn @click="reports_dialog = true" class="ml-3" icon large>
+                                <v-icon>file_upload</v-icon>
+                            </v-btn>
+                            <v-btn to="/analytics" icon large>
+                                <v-icon>analytics</v-icon>
                             </v-btn>
                         </div>
                         <!-- Управление отображением блоков -->
@@ -232,6 +239,7 @@ export default {
             FILLED_REGION_COLOR: '#00000080',
             EMPTY_REGION_COLOR: '#ffffff00',
 
+            mouseover_region_card_id: null,
             selected_sport_object_id: null, // выбранный спорт объект
 
             // Mobile. Диалоговые окна
@@ -1166,42 +1174,5 @@ export default {
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
-}
-
-/* Loader */
-.overlay {
-    text-align: center;
-    background-color: #ffffff !important;
-    color: #05051f !important;
-}
-
-.overlay circle {
-    transform-origin: center;
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: rotate linear infinite;
-}
-
-.overlay circle:nth-child(1) {
-    animation-duration: 1.6s;
-}
-
-.overlay circle:nth-child(2) {
-    animation-duration: 1.2s;
-}
-
-.overlay circle:nth-child(3) {
-    animation-duration: 0.8s;
-}
-
-@keyframes rotate {
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-.overlay svg {
-    width: 100px;
-    height: 100px;
 }
 </style>

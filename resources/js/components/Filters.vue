@@ -1,5 +1,5 @@
 <template>
-  <v-card class="pa-4 d-flex flex-column">
+  <v-card class="pa-4 d-flex flex-column" style="border: 1px rgba(0,0,0, 0.25) solid">
     <h4 class="align-self-center mt-1">Фильтры</h4>
     <!--  Фильтр по ведомству -->
     <v-select
