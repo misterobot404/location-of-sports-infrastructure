@@ -424,7 +424,7 @@ export default {
             storeIntersection: 'intersections/saveObject', //сохранение пересечения
             deleteIntersection: 'intersections/deleteObject', //удаление пересечения
         }),
-        ...mapMutations('layers', ['set_doShowEmptySpaces', 'set_doShowIntersections', 'set_d']),
+        ...mapMutations('layers', ['set_doShowEmptySpaces', 'set_doShowIntersections']),
 
         /*-----------------------------------------------
                         Ф И Л Ь Т Р Ы
