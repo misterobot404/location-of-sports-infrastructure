@@ -27,6 +27,7 @@ class IntersectionController extends Controller
         $intersection->type_sports = request('type_sports');
         $intersection->sportzones_count = request('sportzones_count');
         $intersection->population = request('population');
+        $intersection->population_json = request('population_json');
         $intersection->save();
 
         // 204 No Content - operation successful

@@ -449,14 +449,11 @@ export default {
 
         filterByRegion(objects) { // По региону
             return objects.filter(el => {
-                // Вхождение в регион по координатам, для "сломанного" региона (ЮВ админ. округ)
-                if (this.currentRegion === 1278703) {
-                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
-                    //фильтруем по тем, которые входят в выбранный регион
-                    return this.currentRegionGeometry.geometry.contains(coordinates);
-                }
-                // Вхождение в регион по id
-                else return this.currentRegion === el.region_osm_id;
+                //из-за ошибки в данных, связка не работает
+                //return this.currentRegion == el.region_osm_id;
+                let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
+                //фильтруем по тем, которые входят в выбранный регион
+                return this.currentRegionGeometry.geometry.contains(coordinates);
             })
         },
 
@@ -563,14 +560,15 @@ export default {
                     type_sportzones: JSON.stringify(_sz_by_type),
                     type_sports: JSON.stringify(_sz_by_sport),
                     sportzones_count: _sz_count,
-                    population: _population
+                    population_json: JSON.stringify(_population)
                 };
                 this.storeIntersection(_params);
             });
         },
 
         countSportzonesInside(geoobject) { //ПОДСЧЕТ МЕТРИКИ ПЕРЕСЕЧЕНИЯ
-            let _count = 0, _totalSquare = 0, _sports = [], _sztypes = [], _customHTML = '', _population = 0, _sportzones_by_types = {}, _sportzones_by_sports = {};
+            let _count = 0, _totalSquare = 0, _sports = [], _sztypes = [], _customHTML = '', _sportzones_by_types = {}, _sportzones_by_sports = {},
+                _population = {total: 0, age_up_to_10: 0, age_up_to_20: 0, age_up_to_30: 0, age_up_to_40: 0, age_up_to_50: 0, age_up_to_60: 0, age_after_60: 0};
             //здесь рисуются объекты с базы и с карты, объекты в базе уже просчитаны
             if (geoobject.properties.get('source') != 'db') {
                 //считаем, сколько объектов входит в пересечение
@@ -602,7 +600,14 @@ export default {
                     if (pool[i] && pool[i].coordinates && pool[i].count_persons) {
                         let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
                         if (geoobject.geometry.contains(coord)) {
-                            _population += Math.floor(pool[i].count_persons);
+                            _population.total += Math.floor(pool[i].count_persons);
+                            _population.age_up_to_10 += parseInt(pool[i]["age_up_to_10"]);
+                            _population.age_up_to_20 += parseInt(pool[i]["age_up_to_20"]);
+                            _population.age_up_to_30 += parseInt(pool[i]["age_up_to_30"]);
+                            _population.age_up_to_40 += parseInt(pool[i]["age_up_to_40"]);
+                            _population.age_up_to_50 += parseInt(pool[i]["age_up_to_50"]);
+                            _population.age_up_to_60 += parseInt(pool[i]["age_up_to_60"]);
+                            _population.age_after_60 += parseInt(pool[i]["age_after_60"]);
                         }
                     }
                 }
@@ -616,7 +621,7 @@ export default {
                 _totalSquare = geoobject.properties.get('total_square');
                 _sportzones_by_types = JSON.parse(geoobject.properties.get('sportzones_by_types'));
                 _sportzones_by_sports = JSON.parse(geoobject.properties.get('sportzones_by_sports'));
-                _population = geoobject.properties.get('population');
+                _population = JSON.parse(geoobject.properties.get('population'));
                 _sztypes = Object.keys(_sportzones_by_types);
                 _sports = Object.keys(_sportzones_by_sports);
 
@@ -624,43 +629,51 @@ export default {
                 geoobject.properties.set('sportzone_types', [...new Set(_sztypes)].join('; '));
             }
             _customHTML = `<p>Количество спортзон: ${_count}</p>`
-                + `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`
-                + `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`
-                + `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare ?? 0)} кв.м.</p>`
-                + `<p>Численность населения: ${Math.floor(_population)} чел.</p>`
+                + `<p>Количество проживающих: ${_population.total} чел.</p>`;
+            if (_population.total > 0)
+                _customHTML += `<p>По возрастам:</p>`
+                + `<p>До 10 лет: ${_population.age_up_to_10} чел.</p>`
+                + `<p>До 20 лет: ${_population.age_up_to_20} чел.</p>`
+                + `<p>До 30 лет: ${_population.age_up_to_30} чел.</p>`
+                + `<p>До 40 лет: ${_population.age_up_to_40} чел.</p>`
+                + `<p>До 50 лет: ${_population.age_up_to_50} чел.</p>`
+                + `<p>До 60 лет: ${_population.age_up_to_60} чел.</p>`
+                + `<p>После 60 лет: ${_population.age_after_60} чел.</p>`
             ;
 
-            _customHTML += 'По типам спортзон:<br/><table><tr><th>Тип</th><th>Количество</th></tr>';
-            for (var i in _sportzones_by_types) {
-                _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_types[i]}</td></tr>`
-            }
-            _customHTML += '</table>';
+            //если есть внутри спортзоны - считаем метрику по ним
+            if (_count != 0) {
+                _customHTML += `<p>Типы спортзон: ${[...new Set(_sztypes)].join('; ')}</p>`;
+                _customHTML += `<p>Виды спорта: ${[...new Set(_sports)].join('; ')}</p>`;
+                _customHTML += `<p>Суммарная площадь спортзон: ${Math.ceil(_totalSquare ?? 0)} кв.м.</p>`;
 
-            _customHTML += '<br/>По видам спорта:<br/><table><tr><th>Вид спорта</th><th>Количество</th></tr>';
-            for (var i in _sportzones_by_sports) {
-                _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_sports[i]}</td></tr>`
-            }
-            _customHTML += '</table>';
+                _customHTML += 'По типам спортзон:<br/><table><tr><th>Тип</th><th>Количество</th></tr>';
+                for (var i in _sportzones_by_types) {
+                    _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_types[i]}</td></tr>`
+                }
+                _customHTML += '</table>';
 
-            _customHTML += `<h3>Расчёт (на ${this.calculateOnHundred ? 100000 : 1} чел.)</h3>`;
-            _customHTML += `<p>Спортзон: ${((_count ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)} ед.</p>`;
-            _customHTML += `<p>Площадь: ${((_totalSquare ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)} кв.м.</p>`;
+                _customHTML += '<br/>По видам спорта:<br/><table><tr><th>Вид спорта</th><th>Количество</th></tr>';
+                for (var i in _sportzones_by_sports) {
+                    _customHTML += `<tr><td>${i}</td><td>${_sportzones_by_sports[i]}</td></tr>`
+                }
+                _customHTML += '</table>';
 
-            _customHTML += `По типам спортзон:<br/><table><tr><th>Тип</th><th>Количество</th></tr>`;
-            for (var i in _sportzones_by_types) {
-                _customHTML += `<tr><td>${i}</td><td>${((_sportzones_by_types[i] ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)}</td></tr>`
-            }
-            _customHTML += '</table>';
+                _customHTML += `<h3>Расчёт (на ${this.calculateOnHundred ? 100000 : 1} чел.)</h3>`;
+                _customHTML += `<p>Спортзон: ${((_count ?? 0) / _population.total * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)} ед.</p>`;
+                _customHTML += `<p>Площадь: ${((_totalSquare ?? 0) / _population.total * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)} кв.м.</p>`;
 
-            _customHTML += `<br/>По видам спорта:<br/><table><tr><th>Вид спорта</th><th>Количество</th></tr>`;
-            for (var i in _sportzones_by_sports) {
-                _customHTML += `<tr><td>${i}</td><td>${((_sportzones_by_sports[i] ?? 0) / _population * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)}</td></tr>`
-            }
-            _customHTML += '</table>';
+                _customHTML += `По типам спортзон:<br/><table><tr><th>Тип</th><th>Количество</th></tr>`;
+                for (var i in _sportzones_by_types) {
+                    _customHTML += `<tr><td>${i}</td><td>${((_sportzones_by_types[i] ?? 0) / _population.total * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)}</td></tr>`
+                }
+                _customHTML += '</table>';
 
-            if (_count === 0) {
-                _customHTML = '<p>Количество спортзон: 0</p>';
-                _customHTML += 'Численность населения: ' + _population;
+                _customHTML += `<br/>По видам спорта:<br/><table><tr><th>Вид спорта</th><th>Количество</th></tr>`;
+                for (var i in _sportzones_by_sports) {
+                    _customHTML += `<tr><td>${i}</td><td>${((_sportzones_by_sports[i] ?? 0) / _population.total * (this.calculateOnHundred ? 100000 : 1)).toFixed(4)}</td></tr>`
+                }
+                _customHTML += '</table>';
             }
 
             geoobject.properties.set('balloonContentBody', _customHTML);
@@ -709,22 +722,39 @@ export default {
 
         //считаем информацию по пустой зоне
         countInfoForEmptySpace(space) {
-            let _customHTML = '', _population = 0;
+            let _customHTML = '', _population = {total: 0, age_up_to_10: 0, age_up_to_20: 0, age_up_to_30: 0, age_up_to_40: 0, age_up_to_50: 0, age_up_to_60: 0, age_after_60: 0};
+            // анализируем площадь
+            let _area = space.properties.get('_totalArea');
+            _area = _area > 1000000 ? (_area / 1000000).toFixed(4) + ' кв.км.' : _area + ' кв.м.';
+            _customHTML += `<p>Площадь зоны: ${_area}</p>`;
             //считаем население, входящее в пересечение
             let pool = population_heatmaps['RECORDS'];
             for (var i = 0; i < pool.length; i++) {
                 if (pool[i] && pool[i].coordinates && pool[i].count_persons) {
                     let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
                     if (space.geometry.contains(coord)) {
-                        _population += Math.floor(pool[i].count_persons);
+                        _population.total += Math.floor(pool[i].count_persons);
+                        _population.age_up_to_10 += parseInt(pool[i]["age_up_to_10"]);
+                        _population.age_up_to_20 += parseInt(pool[i]["age_up_to_20"]);
+                        _population.age_up_to_30 += parseInt(pool[i]["age_up_to_30"]);
+                        _population.age_up_to_40 += parseInt(pool[i]["age_up_to_40"]);
+                        _population.age_up_to_50 += parseInt(pool[i]["age_up_to_50"]);
+                        _population.age_up_to_60 += parseInt(pool[i]["age_up_to_60"]);
+                        _population.age_after_60 += parseInt(pool[i]["age_after_60"]);
                     }
                 }
             }
-            _customHTML += `<p>Количество проживающих: ${_population} чел.</p>`;
-            // анализируем площадь
-            let _area = space.properties.get('_totalArea');
-            _area = _area > 1000000 ? (_area / 1000000).toFixed(4) + ' кв.км.' : _area + ' кв.м.';
-            _customHTML += `<p>Площадь зоны: ${_area}</p>`;
+            _customHTML += `<p>Количество проживающих: ${_population.total} чел.</p>`;
+            if (_population.total > 0){
+                _customHTML += `<p>По возрастам:</p>`;
+                _customHTML += `<p>До 10 лет: ${_population.age_up_to_10} чел.</p>`;
+                _customHTML += `<p>До 20 лет: ${_population.age_up_to_20} чел.</p>`;
+                _customHTML += `<p>До 30 лет: ${_population.age_up_to_30} чел.</p>`;
+                _customHTML += `<p>До 40 лет: ${_population.age_up_to_40} чел.</p>`;
+                _customHTML += `<p>До 50 лет: ${_population.age_up_to_50} чел.</p>`;
+                _customHTML += `<p>До 60 лет: ${_population.age_up_to_60} чел.</p>`;
+                _customHTML += `<p>После 60 лет: ${_population.age_after_60} чел.</p>`;
+            }
             space.properties.set('balloonContentBody', _customHTML);
         },
 
@@ -743,7 +773,7 @@ export default {
                         "balloonContentBody": `Body`,
                         "balloonContentFooter": ``,
                         source: inter.geometry ? 'map' : 'db',
-                        population: inter.population,
+                        population: inter.geometry ? inter.population : inter.population_json,
                         sportzones_inside: inter.sportzones_count,
                         total_square: inter.area,
                         sportzones_by_sports: inter.type_sports,
