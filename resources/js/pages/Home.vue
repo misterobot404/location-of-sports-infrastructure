@@ -441,12 +441,11 @@ export default {
 
         filterByRegion(objects) { // По региону
             return objects.filter(el => {
-                return this.currentRegion == el.region_osm_id
-/* redundant
+                //из-за ошибки в данных, связка не работает
+                //return this.currentRegion == el.region_osm_id;
                 let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
                 //фильтруем по тем, которые входят в выбранный регион
                 return this.currentRegionGeometry.geometry.contains(coordinates);
-*/
             })
         },
 
@@ -699,22 +698,37 @@ export default {
 
         //считаем информацию по пустой зоне
         countInfoForEmptySpace(space) {
-            let _customHTML = '', _population = 0;
+            let _customHTML = '', _population = {total: 0, age_up_to_10: 0, age_up_to_20: 0, age_up_to_30: 0, age_up_to_40: 0, age_up_to_50: 0, age_up_to_60: 0, age_after_60: 0};
+            // анализируем площадь
+            let _area = space.properties.get('_totalArea');
+            _area = _area > 1000000 ? (_area / 1000000).toFixed(4) + ' кв.км.' : _area + ' кв.м.';
+            _customHTML += `<p>Площадь зоны: ${_area}</p>`;
             //считаем население, входящее в пересечение
             let pool = population_heatmaps['RECORDS'];
             for (var i = 0; i < pool.length; i++) {
                 if (pool[i] && pool[i].coordinates && pool[i].count_persons) {
                     let coord = pool[i].coordinates.replace(/^\(|\)$/g, '').split(',');
                     if (space.geometry.contains(coord)) {
-                        _population += Math.floor(pool[i].count_persons);
+                        _population.total += Math.floor(pool[i].count_persons);
+                        _population.age_up_to_10 += parseInt(pool[i]["age_up_to_10"]);
+                        _population.age_up_to_20 += parseInt(pool[i]["age_up_to_20"]);
+                        _population.age_up_to_30 += parseInt(pool[i]["age_up_to_30"]);
+                        _population.age_up_to_40 += parseInt(pool[i]["age_up_to_40"]);
+                        _population.age_up_to_50 += parseInt(pool[i]["age_up_to_50"]);
+                        _population.age_up_to_60 += parseInt(pool[i]["age_up_to_60"]);
+                        _population.age_after_60 += parseInt(pool[i]["age_after_60"]);
                     }
                 }
             }
-            _customHTML += `<p>Количество проживающих: ${_population} чел.</p>`;
-            // анализируем площадь
-            let _area = space.properties.get('_totalArea');
-            _area = _area > 1000000 ? (_area / 1000000).toFixed(4) + ' кв.км.' : _area + ' кв.м.';
-            _customHTML += `<p>Площадь зоны: ${_area}</p>`;
+            _customHTML += `<p>Количество проживающих: ${_population.total} чел.</p>`;
+            _customHTML += `<p>По возрастам:</p>`;
+            _customHTML += `<p>До 10 лет: ${_population.age_up_to_10} чел.</p>`;
+            _customHTML += `<p>До 20 лет: ${_population.age_up_to_20} чел.</p>`;
+            _customHTML += `<p>До 30 лет: ${_population.age_up_to_30} чел.</p>`;
+            _customHTML += `<p>До 40 лет: ${_population.age_up_to_40} чел.</p>`;
+            _customHTML += `<p>До 50 лет: ${_population.age_up_to_50} чел.</p>`;
+            _customHTML += `<p>До 60 лет: ${_population.age_up_to_60} чел.</p>`;
+            _customHTML += `<p>После 60 лет: ${_population.age_after_60} чел.</p>`;
             space.properties.set('balloonContentBody', _customHTML);
         },
 
