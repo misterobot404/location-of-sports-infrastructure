@@ -14,7 +14,7 @@
             <v-btn to="/home" icon>
                 <v-icon>arrow_back_ios_new</v-icon>
             </v-btn>
-            <h1 class="ml-2" v-text="!$route.params.id ? 'Город' : getRegions.find(el => el.osm_id === Number($route.params.id)).name"/>
+            <h1 class="ml-2" v-text="currentRegion.name"/>
         </v-row>
         <!-- Diagram  -->
         <v-row class="mb-16 mt-0">
@@ -57,16 +57,22 @@ export default {
                     }
                 })
         },
+        currentRegion() {
+            return this.getRegions.find(el => el.osm_id === Number(this.$route.params.id))
+        }
     },
     async mounted() {
         await axios.get('/api/analytics')
-            .then(response => this.data = response.data.sports)
+            .then(response => this.data = response.data)
 
         let chart = am4core.create(this.$refs.chart, am4charts.PieChart);
         chart.data = this.data;
         let pieSeries = chart.series.push(new am4charts.PieSeries());
-        pieSeries.dataFields.value = "litres";
-        pieSeries.dataFields.category = "country";
+
+        this.data = this.data.filter(el => el.osm_id === this.currentRegion.osm_id);
+
+        pieSeries.dataFields.value = "rateonhundredthousand";
+        pieSeries.dataFields.category = "sport";
 
         this.chart = chart;
         this.is_ready = true;

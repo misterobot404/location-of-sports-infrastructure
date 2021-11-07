@@ -9,7 +9,7 @@ export const routes = [
     },
     {
         // Страница с аналитикой
-        path: '/analytics/:id?',
+        path: '/analytics/:id',
         component: () => import('../pages/Analytics'),
     },
     {

@@ -11,8 +11,6 @@ class AnalyticsController extends Controller
     // Get all
     public function index(): JsonResponse
     {
-        return response()->json([
-            "analytics" => Analytics::all()
-        ], 200);
+        return response()->json([Analytics::all()], 200);
     }
 }

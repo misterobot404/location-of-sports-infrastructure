@@ -1,3 +1,6 @@
 {
-    "/js/main.js": "/js/main.js"
+    "/js/main.js": "/js/main.js",
+    "/js/pdfmake.js": "/js/pdfmake.js",
+    "/js/canvg.js": "/js/canvg.js",
+    "/js/xlsx.js": "/js/xlsx.js"
 }

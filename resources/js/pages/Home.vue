@@ -78,7 +78,7 @@
                             :style="!el.valid ? 'opacity: 0.5' : null"
                             :class="[currentRegion === el.osm_id ? 'primary--text' : null]"
                         >
-                            <v-btn v-if="currentRegion === el.osm_id" :to="'/analytics/' + currentRegion" icon
+                            <v-btn v-if="currentRegion === el.osm_id" icon
                                    style="position: absolute; top: 4px; right: 4px">
                                 <v-icon>analytics</v-icon>
                             </v-btn>
@@ -100,9 +100,6 @@
                             />
                             <v-btn @click="reports_dialog = true" class="ml-3" icon large>
                                 <v-icon>file_upload</v-icon>
-                            </v-btn>
-                            <v-btn to="/analytics" icon large>
-                                <v-icon>analytics</v-icon>
                             </v-btn>
                         </div>
                         <!-- Управление отображением блоков -->
