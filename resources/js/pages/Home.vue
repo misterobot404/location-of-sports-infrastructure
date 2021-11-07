@@ -424,7 +424,7 @@ export default {
             storeIntersection: 'intersections/saveObject', //сохранение пересечения
             deleteIntersection: 'intersections/deleteObject', //удаление пересечения
         }),
-        ...mapMutations('layers', ['set_doShowEmptySpaces', 'set_doShowIntersections', 'set_d']),
+        ...mapMutations('layers', ['set_doShowEmptySpaces', 'set_doShowIntersections']),
 
         /*-----------------------------------------------
                         Ф И Л Ь Т Р Ы
@@ -441,12 +441,14 @@ export default {
 
         filterByRegion(objects) { // По региону
             return objects.filter(el => {
-                return this.currentRegion == el.region_osm_id
-/* redundant
-                let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
-                //фильтруем по тем, которые входят в выбранный регион
-                return this.currentRegionGeometry.geometry.contains(coordinates);
-*/
+                // Вхождение в регион по координатам, для "сломанного" региона (ЮВ админ. округ)
+                if (this.currentRegion === 1278703) {
+                    let coordinates = el.object_coordinates.replace(/^\(|\)$/g, '').split(',');
+                    //фильтруем по тем, которые входят в выбранный регион
+                    return this.currentRegionGeometry.geometry.contains(coordinates);
+                }
+                // Вхождение в регион по id
+                else return this.currentRegion === el.region_osm_id;
             })
         },
 
